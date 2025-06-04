@@ -1,0 +1,450 @@
+// critic01.lib, v 0.01 2002/02/11
+//(Arnaud Bodin, last modified 2003/06/24)
+///////////////////////////////////////////////////////////////////////////////
+version="critic01.lib, v 0.01 2002/02/11";
+category="Singularities";   // line may be commented for some old version of Singular
+info="
+LIBRARY:  critic01.lib      Invariants of Singularities
+AUTHORS:  Arnaud Bodin : email : Arnaud.Bodin@agat.univ-lille1.fr
+
+PROCEDURES:
+  proc critaff (poly F);        gives critical values and affine Milnor numbers
+  proc critinf (poly F);        gives critical values and Milnor numbers at infinity
+  proc crit (poly F);           gives all
+  proc isisolatedinf(poly F);   isolated singularities at infinity ?
+  proc isisolatedaff(poly F);   isolated singularities in affine space ?
+  proc iscoordgeneric(poly F);  generic coordinates ?
+";  
+
+LIB "elim.lib";
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////
+////////  Affine critical values /////////
+//////////////////////////////////////////
+
+// Affine situation of F
+// Input : a polynomial
+// Output[1] poly Baff whose roots are the affine critical
+// Output[2] int mu affine Milnor number
+// Output[3] the list of affine critical values 
+// Output[4] the list of Milnor number for each critical value
+proc critaff (poly F)
+"USAGE:  critaff(F); F = poly
+RETURN:  critical values and affine Milnor numbers
+EXAMPLE: example critaff; shows an example
+"
+{
+  // Change of ring
+  def bring = basering;      // user's ring
+  int n = nvars(bring)-1;
+  poly minp = minpoly;
+  int npar = npars(bring);
+  if (npar == 0)  {string theparstr = string(char(bring));}
+  else {string theparstr = "(" + string(char(bring)) + ", s(1..npar))";}; 
+  string rstr = "ring r = " + theparstr + ", (x(1..n),t), dp;";
+  execute(rstr);
+  minpoly = number(fetch(bring,minp));
+
+  poly f = fetch(bring,F);
+
+ 
+  // Milnor number
+  ideal J = t,jacob(f);
+  int mu = vdim(std(J));
+  
+  // Affine critical values
+  ideal I = (f-t)+jacob(f);
+  poly V = 1;
+  for (int i = 1; i<=n; i=i+1) {V = V * var(i);}
+  ideal E= eliminate (I,V);
+  poly Baff = E[1];
+
+  // List of affine critical values
+  ideal Bfact = factorize(Baff,1);
+  list Blist = list();
+  for (i = 1; i<=size(Bfact); i=i+1) {Blist[i]=Bfact[i];};
+
+  // List of Milnor numbers 
+  list mulist = list();
+  int nstab = 1;
+  J = 0;
+  for (i = 1; i<=size(Bfact); i=i+1) 
+    {
+    J = jacob(f),Bfact[i];
+    nstab = stab(J,f-t);
+    I = J, (f-t)^nstab;  
+    mulist[i] = vdim(std(I));    
+    } ;
+
+  // Back to user's ring
+  setring bring;
+  poly Baffs = fetch(r,Baff);
+  list Blists = fetch(r,Blist);
+  return(Baffs,mu,Blists,mulist);
+}
+example
+{ "EXAMPLE:"; echo = 2;
+   ring r  = 0, (x,y,t), dp;
+   poly P  = x2-y3;
+   critaff(P);
+}
+///////////////////////////////////////////////////////////////////////////////
+
+
+//////////////////////////////////////////
+//////  Critical values at infinity  /////
+//////////////////////////////////////////
+
+// Partial situation at infinity of F
+// Input : a polynomial, an integer k
+// Compute only the roots in the space x1=0, x2=0, x{k-1}=0, xk=1
+// Warning : Input should be generic with respect to xk=0
+static proc critinfx(poly F, int k)
+{
+  // Change of ring
+  def bring = basering;      // user's ring
+  int n = nvars(bring)-1;
+  poly minp = minpoly;
+  int npar = npars(bring);
+  if (npar == 0)  {string theparstr = string(char(bring));}
+  else {string theparstr = "(" + string(char(bring)) + ", s(1..npar))";}; 
+  string rstr = "ring r = " + theparstr + ", (x(1..n),t,z), dp;";
+  execute(rstr);
+  minpoly = number(fetch(bring,minp));
+
+  poly f = fetch(bring,F);
+  
+  // X = (fH=0)
+  poly fH = homog(f,z)-t*z^deg(f);   // t is a parameter not a variable
+  ideal X = fH;
+  ideal Xinf = z,fH;
+
+  // Polar Curve with respect to (xk=0)
+  list L = list();
+  for (int i = 1; i<k; i=i+1) {L[i] = diff(f,x(i));}
+  for (i = k+1; i<=n; i=i+1) {L[i-1] = diff(f,x(i));}
+  ideal P = L[1..n-1];   // Affine polar curve
+  ideal PH = homog(P,z);
+
+  // Cloture of the intersection of polar curve and X\Xinf and (xk<>0)
+  // We localise outside xk=0 projectively, i.e. we set xk=1 
+  ideal Cbar= x(k)-1,X,PH;
+       
+  // We exclude the part of the polar curve that comes from Xinf
+  ideal C = sat(Cbar,Xinf)[1];  
+  
+  // We calculate the intersection of the "real" polar curve C
+  // with the hyperplane at infinity
+  ideal Cinf = z,x(k)-1,C;
+
+  // We go in x1=0, x2=0, x{k-1}=0, xk=1 to avoid redundancy
+  list LL = list();
+  for (i = 1; i<k; i=i+1) {LL[i] = x(i);}
+  if (k==1) {ideal K = 0;} else {ideal K = LL[1..k-1];};
+  ideal Cred = Cinf,K; 
+
+  // We get the critical values at infinity by elimination
+  poly V = 1;
+  for (i = 1; i<=n; i=i+1) {V = V * var(i);};
+  ideal B = eliminate(Cred,V*z);
+  poly Binf = polyred(B[1]);
+
+  // List of critical values at infinity
+  ideal Bfact = factorize(Binf,1);
+  list Binflist = list();
+  for (i = 1; i<=size(Bfact); i=i+1) {Binflist[i]=Bfact[i];};
+ 
+  // Milnor number at infinity
+  ideal I = Binf,X,C;   
+  int Kstab = stab(I,K);
+  int nstab = stab(I,z);
+  ideal II = z^nstab,K^Kstab,I;
+  int lambda = vdim(std(II));   
+
+  // List of Milnor numbers at infinity
+  list lambdalist = list();
+  for (i = 1; i<=size(Binflist); i=i+1) 
+    {
+    I = Binflist[i],X,C;   
+    II = z^nstab,K^Kstab,I;
+    lambdalist[i] = vdim(std(II));    
+    } ;
+    
+  // Back to user's ring
+  setring bring; 
+  poly Binfs = fetch(r,Binf); 
+  list Binflists = fetch(r,Binflist);
+  return(Binfs,lambda,Binflists,lambdalist);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+// Critical values at infinity of F
+// Input : a polynomial
+// Output[1] poly Binf whose roots are the critical values at infinity
+// Output[2] int lambda Milnor number at infinity
+// Output[3] the list of critical values 
+// Output[4] the list of Milnor number at infinity for each critcal value
+// Warning : Input should be generic with respect to all the coordinates
+proc critinf(poly F)
+"USAGE:   critinf(F); F = poly
+RETURN:  critical values and affine Milnor at infinity
+EXAMPLE: example critinf; shows an example
+"
+{ 
+  def bring = basering;      // user's ring
+  int n = nvars(bring)-1;
+  poly f = F;
+  // Verification of the hypotheses
+  int isisolaff = isisolatedaff(f);
+  if (isisolaff == 0) {"Warning : Non isolated affine singularities, the following could be FALSE";}
+  int isgen = iscoordgeneric(f);
+  if (isgen == 0) {"Warning : Non generic coordinates, the following could be FALSE";};
+  int isisolinf = isisolatedinf(f);
+  if (isisolinf == 0) {"Warning : Non isolated singularities at infinity, the following could be FALSE";};
+  
+  // Calculus in all coordinates
+  poly Binf = 1;
+  int lambda = 0;
+  list Binflist = list();
+  list lambdalist = list();
+  list rep = list();
+  for (int i = 1; i<=n; i=i+1) 
+  {
+       rep = critinfx(f,i);
+       Binf = Binf * rep[1];
+       lambda = lambda + rep[2];
+       if (rep[2] > 0) 
+       {
+         Binflist = Binflist + rep[3];            
+         lambdalist = lambdalist + rep[4];
+       };
+  };
+ if (size(lambdalist)==0) {lambdalist=list(0);}
+ if (size(Binflist)==0) {Binflist=list(1);}
+ return(Binf,lambda,Binflist,lambdalist);
+}
+example
+{ "EXAMPLE:"; echo = 2;
+   ring r  = 0, (x,y,t), dp;
+   poly P  = x*(xy-1);  // Broughton's example
+   critinf(P);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////
+//////////// Critical values  ////////////
+//////////////////////////////////////////
+
+// Critical values of F
+// Input : a polynomial
+// Output : all
+proc crit(poly F)
+"USAGE:   crit(F); F = poly
+RETURN:  critical values and affine Milnor number in affine and at infinity
+EXAMPLE: example crit; shows an example
+"
+{ 
+  poly f = F;
+  "Polynomial : " + string(f);
+
+  // Affine part
+  list Repaff = critaff(f);
+  "Affine critical values are the roots of " + string(Repaff[1]);
+  int mu = Repaff[2];  
+  if (mu == -1) {"Non isolated affine singularities";}
+  else {"Affine Milnor number : " + string(mu);};
+  if (mu > 0) 
+  { "Details of affine critical values :";
+     presentation(Repaff[3],Repaff[4]);
+  };
+  
+  // Part at infinity
+  list Repinf = critinf(f);
+  "Critical values at infinity are the roots of " + string(Repinf[1]);
+  "Milnor number at infinity : " + string(Repinf[2]);
+  if (deg(Repinf[1]) > 0)
+  { "Details of critical values at infinity :";
+    presentation(Repinf[3],Repinf[4]);
+  };
+
+  return();   
+  //return(list(Repaff,Repinf));
+}
+example
+{ "EXAMPLE:"; echo = 2;
+   ring r  = 0, (x,y,t), dp;
+   poly P  = xy*(x2y-1); 
+   crit(P);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////
+/////////////  Hypotheses    /////////////
+//////////////////////////////////////////
+
+// All the coordinates are generic ?
+// Verify if all polar curves are curves or void.
+// Input the polynomial F
+// Output 1 if YES, 0 if NO
+proc iscoordgeneric(poly F)
+"USAGE:  iscoordgeneric(F); F = poly
+RETURN:  1 if the coordinates are generic, 0 otherwise
+EXAMPLE: example iscoordgeneric; shows an example
+"
+{ 
+  def bring = basering;      // user's ring
+  int n = nvars(bring)-1;
+  poly f = F;
+  // t is var(n+1)
+  list L = list();   int answ = 1;   int j;   int d;
+  ideal P;   ideal Pt;
+  for (int i = 1; i<=n; i=i+1)
+  {
+    for (j = 1; j<=n; j=j+1)   {L[j]=diff(f,var(j));};
+    L[1]=diff(f,var(i));
+    L[i]=diff(f,var(1));
+    P = L[2..n];   // Affine polar curve
+    Pt = var(n+1),P;   // Do not depend on t
+    d = dim(std(Pt));
+    if (d == -1 or d == 1) {answ=answ;}  else {answ=0;};
+  }
+  return(answ);
+}
+example
+{ "EXAMPLE:"; echo = 2;
+   ring r  = 0, (x,y,t), dp;
+   poly P  = x2-y3;
+   iscoordgeneric(P);
+   poly Q = x2;
+   iscoordgeneric(Q);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+// Isolated singularities in affine space ?
+// Input the polynomial F
+// Output 1 if YES, 0 if NO
+proc isisolatedaff (poly F)
+"USAGE:  isisolatedaff(F); F = poly
+RETURN:  1 if isoalted singularities in affine space, 0 otherwise
+EXAMPLE: example isisolatedaff; shows an example
+"
+{ 
+  def bring = basering;      // user's ring
+  int n = nvars(bring)-1;
+  ideal J = var(n+1), jacob(F);   
+  int mu = vdim(std(J)); 
+  int answ = 0;
+  // Verify if 0-dimensional 
+  if (mu>=0) {answ = 1;};
+  return(answ);
+}
+example
+{ "EXAMPLE:"; echo = 2;
+   ring r  = 0, (x,y,t), dp;
+   poly P  = x2y;
+   isisolatedaff(P);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+// Isolated singularities at infinity ?
+// Input the polynomial F
+// Output 1 if YES, 0 if NO
+proc isisolatedinf (poly F)
+"USAGE:  isisolatedinf(F); F = poly
+RETURN:  1 if isolated singularities at infinity, 0 otherwise
+EXAMPLE: example isisolatedinf; shows an example
+"
+{ 
+  // Change of ring
+  def bring = basering;      // user's ring
+  int n = nvars(bring)-1;
+  poly minp = minpoly;
+  int npar = npars(bring);
+  if (npar == 0)  {string theparstr = string(char(bring));}
+  else {string theparstr = "(" + string(char(bring)) + ", s(1..npar))";}; 
+  string rstr = "ring r = " + theparstr + ", (x(1..n),t,z), dp;";
+  execute(rstr);
+  minpoly = number(fetch(bring,minp));
+
+  poly f = fetch(bring,F);
+    
+
+  poly fH = homog(f,z)-t*z^deg(f);   // t is a parameter not a variable
+  poly fd = subst(fH,z,0);
+  poly fdd = subst(diff(fH,z),z,0);
+  list L = list();
+  for (int i = 1; i<=n; i=i+1) {L[i] = diff(fd,x(i));}
+
+  ideal I = z,t,fdd,L[1..n];   // Affine polar curve
+  int dimension = dim(std(I)); 
+  int answ = 0;
+  // Verify if 0-dimensional (as projective set)
+  if ((dimension==-1) or (dimension==0) or (dimension==1)) {answ = 1;};
+  return(answ);
+}
+example
+{ "EXAMPLE:"; echo = 2;
+   ring r  = 0, (x,y,t), dp;
+   poly P  = x*(xy-1);
+   isisolatedinf(P);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////
+/////////////     Tools      /////////////
+//////////////////////////////////////////
+
+// Procedure of stabilisation
+// Input : ideal I, ideal J
+// output : the minimal k>0 such that J^k in I
+static proc stab(ideal I, ideal J)
+{ 
+  int k = 0;   int d = -1;   int dd = 0;
+  ideal K;
+  while(d<dd)
+  { 
+    k = k+1; 
+    d = dd;
+    K = I, J^k;
+    dd =  vdim(std(K));
+  } 
+  k = k-1;
+  // Warning : we want k>0 as a result 
+  if (k<1) {k=1;};
+  return(k);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+// Reduce a polynomial 
+static proc polyred(poly B)
+{ ideal L = factorize(B,1);
+  poly Bred = 1;
+  for (int i=1; i<= size(L); i=i+1) 
+   {Bred = Bred * L[i];};
+  return(Bred);
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+// Presentation of the critical values 
+// and of Milnor numbers
+static proc presentation (list Blist, list mlist)
+{ if (size(Blist)>0)
+  { for (int i=1; i<=size(Blist); i=i+1)
+    { "  " + string(Blist[i]) + "   " + string(mlist[i]) + "  "; }
+  }
+  return();
+}
+
+///////////////////////////////////////////////////////////////////////////////
