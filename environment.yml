@@ -1,0 +1,7 @@
+name: sage-binder
+channels: 
+  - conda-forge
+dependencies:
+  - sage 10.6
+  - python=3.10
+
