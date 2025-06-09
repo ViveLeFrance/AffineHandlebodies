@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+title: Affine Handlebodies
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Joël
+    name-particle: D.
+    family-names: Beimler
+    email: joel.beimler@gmx.ch
+    affiliation: University of Southern Denmark
+    orcid: 'https://orcid.org/0009-0004-4520-4979'
+repository-code: 'https://github.com/ViveLeFrance/AffineHandlebodies'
