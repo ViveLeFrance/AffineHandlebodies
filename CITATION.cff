@@ -6,7 +6,6 @@ message: >-
 type: software
 authors:
   - given-names: Joël
-    name-particle: D.
     family-names: Beimler
     email: joel.beimler@gmx.ch
     affiliation: University of Southern Denmark

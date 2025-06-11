@@ -4,4 +4,5 @@ channels:
 dependencies:
   - sage 10.6
   - python
+  - ipympl
 
