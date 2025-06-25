@@ -262,21 +262,24 @@ def kernels(f: LefschetzFibration, point: dict[Any, Any]):
     variables.append(w)
     R = PolynomialRing(CC, names=variables)
 
-    G_hom = G_hom = SR(R(f.domain).homogenize(var='w'))
+    G_hom = SR(R(f.domain).homogenize(var='w'))
     f_hom = SR(R(f.fibration).homogenize(var='w'))
+    print(f_hom)
     
     J_inf = jacobian([G_hom, w], variables).subs(point).transpose()
     J_f = jacobian([G_hom, f_hom], variables).subs(point).transpose()
-    # print('****************')
+    # print('*******Jacs*********')
     # print(J_inf)
+    # print('---')
     # print(J_f)
     # print('****************')
 
     ker_inf = J_inf.kernel()
     ker_f = J_f.kernel()
 
-    # print('----------------')
+    # print('------Kernels----------')
     # print(ker_inf)
+    # print('******************')
     # print(ker_f)
     # print('----------------')
 
