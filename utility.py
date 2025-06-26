@@ -523,6 +523,29 @@ def trace_preimage(rho: LefschetzFibration, t, path: List[complex], title=None, 
 
     return fig, ax
 
+def plot_pl_path(path: List[complex], steps=70, title=None, spec_points=None):
+    points = [complex(point) for point in path]
+    real = [point.real for point in points]
+    imag = [point.imag for point in points]
+
+    fig, ax = plt.subplots()
+    ax.plot(real, imag, 'bo-', markersize=4, label="PL Path")
+    ax.set_xlabel('Re')
+    ax.set_ylabel('Im')
+    ax.set_title(title if title else "Piecewise Linear Path in Complex Plane")
+    ax.grid(True)
+
+    # Overlay specified points if provided
+    overlay_points = spec_points
+    if overlay_points is not None:
+        overlay_points = [complex(pt) for pt in overlay_points]
+        overlay_real = [pt.real for pt in overlay_points]
+        overlay_imag = [pt.imag for pt in overlay_points]
+        ax.plot(overlay_real, overlay_imag, 'ro', markersize=7, label="Overlay Points")
+
+    ax.legend()
+    plt.show()
+
 
 def parameterized_rho_crits(rho: LefschetzFibration, rho_param_path: Dict[str, List[complex]]):
 
