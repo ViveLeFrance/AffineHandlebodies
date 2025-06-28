@@ -547,32 +547,38 @@ def plot_pl_path(path: List[complex], steps=70, title=None, spec_points=None):
     plt.show()
 
 
-def parameterized_rho_crits(rho: LefschetzFibration, rho_param_path: Dict[str, List[complex]]):
+def parameterized_fib_crits(fib: LefschetzFibration, fib_param_path: Dict[str, List[complex]]):
 
-    if len(rho_param_path['a']) != len(rho_param_path['b']):
+    if len(fib_param_path['a']) != len(fib_param_path['b']):
         raise ValueError("The paths must have the same number of points.")
-
-    if len(rho.variables) != 2:
-        raise ValueError("The fibration must be linear in two variables.")
     
-    n = len(rho_param_path['a'])
-
-    r1, r2 = var('r1, r2', domain=CC)
-
-
-    domain = rho.domain.subs(rho.variables[0]==r1, rho.variables[1]==r2)
-
-
-    a_path = rho_param_path['a']
-    b_path = rho_param_path['b']
-  
+    n = len(fib_param_path['a'])
     crits = {}
-    
-    for i in range(n):
-        rho_eq = CC(a_path[i])*r1 + CC(b_path[i])*r2
-        rho_i = LefschetzFibration([r1,r2], domain, rho_eq)
 
-        crits[i] = rho_i.get_critical_values()
+    if len(fib.variables) == 2:
+        r1, r2 = var('r1, r2', domain=CC)
+        domain = fib.domain.subs(fib.variables[0]==r1, fib.variables[1]==r2)
+        a_path = fib_param_path['a']
+        b_path = fib_param_path['b']
+    
+        for i in range(n):
+            fib_eq = CC(a_path[i])*r1 + CC(b_path[i])*r2
+            fib_i = LefschetzFibration([r1,r2], domain, fib_eq)
+
+            crits[i] = fib_i.get_critical_values()
+    
+    if len(fib.variables) == 3: 
+        r1, r2, r3 = var('r1, r2, r3', domain=CC)
+        domain = fib.domain.subs(fib.variables[0]==r1, fib.variables[1]==r2, fib.variables[2]==r3)
+        a_path = fib_param_path['a']
+        b_path = fib_param_path['b']
+        c_path = fib_param_path['c']
+    
+        for i in range(n):
+            fib_eq = CC(a_path[i])*r1 + CC(b_path[i])*r2 + CC(c_path[i])*r3
+            fib_i = LefschetzFibration([r1,r2,r3], domain, fib_eq)
+
+            crits[i] = fib_i.get_critical_values()   
 
     return crits
 
