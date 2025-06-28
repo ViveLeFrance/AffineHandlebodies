@@ -64,17 +64,17 @@ class LefschetzFibration:
         if variable is None:
             variable = self.variables[0]
 
-        fibre = self.get_fibre(point, variable)
+        # fibre = self.get_fibre(point, variable)
 
         w = var('w', domain=CC)
         variables = [variable for variable in self.variables]
-        variables.remove(variable)
         variables.append(w)
         R = PolynomialRing(CC, names=variables)
 
-        fibre_hom = SR(R(fibre).homogenize(var='w'))
+        domain_hom = SR(R(self.domain).homogenize(var='w'))
+        fibre_hom = SR(R(self.fibration).homogenize(var='w'))
 
-        constraints = [w==0, fibre_hom==0]
+        constraints = [w==0, fibre_hom==0, domain_hom==0]
 
         intersection = solve(constraints, variables, solution_dict=True)
 
@@ -125,3 +125,104 @@ class Bifibration:
                 matching_path[index/(n-1)] = rho_s.get_critical_values()
 
         return matching_path
+    
+
+# def intersection_at_infinity(f: LefschetzFibration):
+#     """Determines the intersection of the projectivization of the homogenized domain of f with 
+#     its zero set at infinity."""
+#     w = var('w', domain=CC)
+#     variables = [variable for variable in f.variables]
+#     variables.append(w)
+#     R = PolynomialRing(CC, names=variables)
+
+#     G_hom = G_hom = SR(R(f.domain).homogenize(var='w'))
+#     f_hom = SR(R(f.fibration).homogenize(var='w'))
+
+#     constraints = [w==0, G_hom==0, f_hom==0]
+
+#     intersection = solve(constraints, variables, solution_dict=True)
+
+#     return set_free_variable_to_one_list(intersection)
+
+
+# def intersection_summary(f: LefschetzFibration):
+#     w = var('w', domain=CC)
+#     variables = [variable for variable in f.variables]
+#     variables.append(w)
+#     R = PolynomialRing(CC, names=variables)
+
+#     G_hom = SR(R(f.domain).homogenize(var='w'))
+#     f_hom = SR(R(f.fibration).homogenize(var='w'))
+
+#     hyp_at_inf_constraints = [G_hom==0, w==0]
+#     f_vanishing = [f_hom==0]
+
+#     constraints = [expression for expression in hyp_at_inf_constraints]
+#     constraints.extend(f_vanishing)
+
+#     print(f'The hyperplane at infinity is given by {G_hom.subs(w==0)} == 0.')
+#     print(f'The fibration vanishes at {f_vanishing}.')
+#     intersection = set_free_variable_to_one_list(solve(constraints, variables, solution_dict=True))
+
+#     print(f'Their intersection consists of {intersection}.')
+
+
+def kernels(f: LefschetzFibration, point: dict[Any, Any]):
+    w = var('w', domain=CC)
+    variables = [variable for variable in f.variables]
+    variables.append(w)
+    R = PolynomialRing(CC, names=variables)
+
+    G_hom = SR(R(f.domain).homogenize(var='w'))
+    f_hom = SR(R(f.fibration).homogenize(var='w'))
+    print(f_hom)
+    
+    J_inf = jacobian([G_hom, w], variables).subs(point).transpose()
+    J_f = jacobian([G_hom, f_hom], variables).subs(point).transpose()
+    # print('*******Jacs*********')
+    # print(J_inf)
+    # print('---')
+    # print(J_f)
+    # print('****************')
+
+    ker_inf = J_inf.kernel()
+    ker_f = J_f.kernel()
+
+    # print('------Kernels----------')
+    # print(ker_inf)
+    # print('******************')
+    # print(ker_f)
+    # print('----------------')
+
+    intersection = ker_inf.intersection(ker_f)
+
+    return intersection
+
+
+def transversality_at_infinity(pi: LefschetzFibration, origin_fibre=0, variable=None):
+    """Checks whether the fibration is transverse to the hyperplane at infinity."""
+    
+    intersection = pi.get_fibre_boundary_components(point=origin_fibre, variable=variable)
+
+    if len(intersection) == 0:
+        print('The fibration does not vanish at infinity.')
+    
+    else:
+        w = var('w', domain=CC)
+        variables = [variable for variable in pi.variables]
+        variables.append(w)
+        R = PolynomialRing(CC, names=variables)
+
+        domain_hom = SR(R(pi.domain).homogenize(var='w'))
+        fibre_hom = SR(R(pi.fibration).homogenize(var='w'))
+
+        gradF = [domain_hom.diff(variable) for variable in variables]
+        gradpi = [fibre_hom.diff(variable) for variable in variables]
+
+        for point in intersection:
+            row1 = [pdev.subs(point) for pdev in gradF]
+            row2 = [pdev.subs(point) for pdev in gradpi]
+            row3 = [0,0,0,1]
+
+            M = matrix(CC, [row1, row2, row3])
+            print(f'The rank of M at {point} is {M.rank()}.')
