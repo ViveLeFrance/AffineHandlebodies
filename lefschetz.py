@@ -88,7 +88,7 @@ class Bifibration:
         self.pi = pi
         self.rho = rho
 
-    def get_matching_path(self, rho_eq, origin_fibre=None, target_fibre=None, steps=70, solvefor=None, path=None):
+    def get_matching_path(self, origin_fibre=None, target_fibre=None, steps=70, solvefor=None, path=None):
         """For a vanishing path of pi, the critical values of rho restricted to the fibres
         over the vanishin path are such that two of them will converge, yielding a matching path
         of rho. This function computes the trace of these critical values."""
@@ -108,9 +108,10 @@ class Bifibration:
         rho_eq_t = self.rho.fibration.subs(solvefor==fibre_t)
         
         matching_path = {}
+
         if not path:
             
-            for s in np.linspace(0,1,steps):
+            for s in np.linspace(0, 1, steps):
                 fibre_s = fibre_t.subs(t==(1-s)*origin_fibre + s*target_fibre)
                 rho_eq_s = rho_eq_t.subs(t==(1-s)*origin_fibre + s*target_fibre)
                 rho_s = LefschetzFibration(rho_vars, fibre_s, rho_eq_s)
