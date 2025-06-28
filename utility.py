@@ -13,183 +13,120 @@ import random
 
 
 
-class LefschetzFibration:
+# class LefschetzFibration:
 
-    def __init__(self, variables, domain_equation, fibration_equation) -> None:
-        self.variables = variables
-        self.domain = domain_equation
-        self.fibration = fibration_equation
+#     def __init__(self, variables, domain_equation, fibration_equation) -> None:
+#         self.variables = variables
+#         self.domain = domain_equation
+#         self.fibration = fibration_equation
 
-    def __call__(self, argument):
-        return self.fibration.subs(argument)
+#     def __call__(self, argument):
+#         return self.fibration.subs(argument)
 
-    def get_critical_points(self):
-        """Solves for when the gradient of the domain
-        is parallel to the differential of the fibration."""
-        G = self.domain
-        f = self.fibration
-        a = var('a', domain=CC) # additional variable to solve for parallelity
-
-
-        constraints = [G==0]
-        constraints.extend([G.diff(variable) == a*f.diff(variable) for variable in self.variables])
+#     def get_critical_points(self):
+#         """Solves for when the gradient of the domain
+#         is parallel to the differential of the fibration."""
+#         G = self.domain
+#         f = self.fibration
+#         a = var('a', domain=CC) # additional variable to solve for parallelity
 
 
-        points = solve(constraints, self.variables + [a], solution_dict=True)
+#         constraints = [G==0]
+#         constraints.extend([G.diff(variable) == a*f.diff(variable) for variable in self.variables])
 
+#         points = solve(constraints, self.variables + [a], solution_dict=True)
 
+#         for p in points:
+#             del p[a]
 
-        for p in points:
-            del p[a]
-
-            # for key in p.keys():
-            #     p[key] = complex(round(p[key].real(),8),round(p[key].imag(),8)) 
-
-
-        # unique_dicts = [dict(t) for t in {frozenset(d.items()) for d in points}]
-
-        return points
+#         return points
 
        
-    def get_critical_values(self):
-        crit_points = self.get_critical_points()
-        return list(set([self.__call__(x) for x in crit_points]))
+#     def get_critical_values(self):
+#         crit_points = self.get_critical_points()
+#         return list(set([self.__call__(x) for x in crit_points]))
 
-    def get_fibre(self, point, variable=None):
-        """Solves for the fibre of a given point in the specified variable.
-        If no variable is specified, it will solve for the first variable in the list.
-        Note that we assume the fibration to be linear in all variables."""
+#     def get_fibre(self, point, variable=None):
+#         """Solves for the fibre over a given point in the specified variable.
+#         If no variable is specified, it will solve for the first variable in the list.
+#         Note that we assume the fibration to be linear in all variables."""
 
-        if variable is None:
-            variable = self.variables[0]
+#         if variable is None:
+#             variable = self.variables[0]
 
-        f = self.fibration
-        G = self.domain
+#         f = self.fibration
+#         G = self.domain
 
-        fib_solution = solve(f == point, variable) # f linear, so we expect a single equation
+#         fib_solution = solve(f == point, variable) # f expected to be linear, so we get a single chart
 
-        return G.subs(fib_solution).simplify()
-
-
-    def get_hessian(self, solvefor):
-        abstract_pi = function('abs_pi', self.variables)
-        pi_z = solve(self.fibration == abstract_pi, solvefor)[0]
-
-        
-
-        second_derivatives = []
-        solved_vars = self.variables
-        solved_vars.remove(solvefor)
-        dpi = var('dpi', domain=CC)
-        d_vars = [var(f'd_{variable}', domain=CC) for variable in solved_vars]
-        dz = pi_z.subs(abstract_pi == dpi, )
+#         return G.subs(fib_solution).simplify()
 
 
+#     def get_hessian(self, point):
+#         """Computes complex hessian to check nondegeneracy. Generic linear sections will be nondegenerate."""
+#         pass
 
-        domain_differential = {variable: self.domain.diff(variable).subs(pi_z) for variable in self.variables}
+#     def get_fibre_boundary_components(self, point, variable=None):
+#         """Determines the number of boundary components of the fibre over a specified
+#         point by computing the number of points at the hyperplane at infinity in
+#         the projectivization of the fibre."""
 
-        d_pi_eq = sum([coeff * dvar for coeff, dvar in zip(domain_differential, d_vars)]) + 2 == 0
-        # dpi_eq = {variable: }
-        # dz = {variable: -1/pi_z*domain_differential[variable] for variable in solved_vars}
+#         if variable is None:
+#             variable = self.variables[0]
+
+#         fibre = self.get_fibre(point, variable)
+
+#         w = var('w', domain=CC)
+#         variables = [variable for variable in self.variables]
+#         variables.remove(variable)
+#         variables.append(w)
+#         R = PolynomialRing(CC, names=variables)
+
+#         fibre_hom = SR(R(fibre).homogenize(var='w'))
+
+#         constraints = [w==0, fibre_hom==0]
+
+#         intersection = solve(constraints, variables, solution_dict=True)
+
+#         return set_free_variable_to_one_list(intersection)
 
 
-
-            
-        for variable in self.variables:
-            print(variable)
-            f_w = solve(self.fibration == t, variable)
-            print(self.fibration==t)
-            for term in domain_differential:
-                print(term)
-                print(f_w)
-                term.subs(f_w[0])
-                second_derivatives.append(term.diff(variable))
-
-        n = len(self.variables)
-        matrix = Matrix(SR, n, n, second_derivatives)
-        return matrix        
-
-
-
-
-    def get_fibre_boundary_components(self, point, variable=None):
-        if variable is None:
-            variable = self.variables[0]
-
-        fibre = self.get_fibre(point, variable)
-
-        w = var('w', domain=CC)
-        variables = [variable for variable in self.variables]
-        variables.remove(variable)
-        variables.append(w)
-        R = PolynomialRing(CC, names=variables)
-
-        fibre_hom = SR(R(fibre).homogenize(var='w'))
-
-        constraints = [w==0, fibre_hom==0]
-
-        intersection = solve(constraints, variables, solution_dict=True)
-
-        return set_free_variable_to_one_list(intersection)
-
+# def get_matching_path(self, rho_eq, origin_fibre=None, target_fibre=None, steps=70, solvefor=None, path=None):
     
-    def get_matching_path(self, rho_eq, origin_fibre=None, target_fibre=None, steps=70, solvefor=None, path=None):
+#     if (origin_fibre is None or target_fibre is None) and path is None:
+#         raise ValueError("Please provide a path or origin and target fibres.")
 
-        if (origin_fibre is None or target_fibre is None) and path is None:
-            raise ValueError("Please provide a path or origin and target fibres.")
+#     t = var('t', domain=CC)
 
-        t = var('t', domain=CC)
+#     if solvefor is None:
+#         solvefor = self.variables[0]
 
-        if solvefor is None:
-            solvefor = self.variables[0]
-
-        fibre_t = self.get_fibre(t, solvefor)
-        rho_eq_t = rho_eq.subs(solvefor == fibre_t)
+#     fibre_t = self.get_fibre(t, solvefor)
+#     rho_eq_t = rho_eq.subs(solvefor == fibre_t)
 
 
 
-        variables = self.variables
-        # variables.remove(solvefor)
+#     variables = self.variables
+#     # variables.remove(solvefor)
 
-        matching_path = {}
-        # if not split:
-        if not path:
-            
-            for s in np.linspace(0,1,steps):
-                fibre_s = fibre_t.subs(t==(1-s)*origin_fibre + s*target_fibre)
-                rho_eq_s = rho_eq_t.subs(t==(1-s)*origin_fibre + s*target_fibre)
-                rho_s = LefschetzFibration(variables, fibre_s, rho_eq_s)
-                matching_path[s] = rho_s.get_critical_values()
-        else:
-            n = len(path)
-            for index, point in enumerate(path):
-                fibre_s = fibre_t.subs(t==point)
-                rho_eq_s = rho_eq_t.subs(t==point)
-                rho_s = LefschetzFibration(variables, fibre_s, rho_eq_s)
-                matching_path[index/(n-1)] = rho_s.get_critical_values()
-        # else:
-        #     path_number = len(LefschetzFibration(variables, fibre_t.subs(t==origin_fibre), rho_eq).get_critical_values())
-        #     if not path:
-        #         for path_no in range(path_number):
-        #             matching_path[path_no] = {}
-        #             for s in np.linspace(0,1,steps):
-        #                 fibre_s = fibre_t.subs(t==(1-s)*origin_fibre + s*target_fibre)
-        #                 rho_eq_s = rho_eq_t.subs(t==(1-s)*origin_fibre + s*target_fibre)
-        #                 rho_s = LefschetzFibration(variables, fibre_s, rho_eq_s)
-        #                 crits = rho_s.get_critical_values()
-                    
-        #                 matching_path[path_no][s] = [crits[path_no]]
+#     matching_path = {}
+#     # if not split:
+#     if not path:
+        
+#         for s in np.linspace(0,1,steps):
+#             fibre_s = fibre_t.subs(t==(1-s)*origin_fibre + s*target_fibre)
+#             rho_eq_s = rho_eq_t.subs(t==(1-s)*origin_fibre + s*target_fibre)
+#             rho_s = LefschetzFibration(variables, fibre_s, rho_eq_s)
+#             matching_path[s] = rho_s.get_critical_values()
+#     else:
+#         n = len(path)
+#         for index, point in enumerate(path):
+#             fibre_s = fibre_t.subs(t==point)
+#             rho_eq_s = rho_eq_t.subs(t==point)
+#             rho_s = LefschetzFibration(variables, fibre_s, rho_eq_s)
+#             matching_path[index/(n-1)] = rho_s.get_critical_values()
 
-        #     else:
-        #         for path_no in range(path_number):
-        #             matching_path[path_no] = {}
-        #             for index, point in enumerate(path):
-        #                 fibre_s = fibre_t.subs(t==point)
-        #                 rho_eq_s = rho_eq_t.subs(t==point)
-        #                 rho_s = LefschetzFibration(variables, fibre_s, rho_eq_s)
-        #                 matching_path[path_no][index] = [rho_s.get_critical_values()[path_no]]
-
-        return matching_path
+#     return matching_path
 
     
 def NumericalRoots(expr):
