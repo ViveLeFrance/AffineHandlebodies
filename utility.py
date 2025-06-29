@@ -179,9 +179,18 @@ def pl_path(points: List[complex], steps=70):
     if len(points) == 1:
         return [points[0]]*steps
 
+    seg_length = steps//(len(points)-1)
+    remainder = steps - seg_length * (len(points)-1) 
+
     for i in range(0, len(points)-1):
-        for s in np.linspace(0,1,steps):
+        for s in np.linspace(0,1,seg_length):
             path.append((1-s)*points[i] + s*points[(i+1)])
+    
+    while remainder > 0:
+        path.append(points[-1])
+        remainder -= 1
+
+
     return path
 
 def pl_path_1(origin_fibre, target_fibre, offset = None, steps=70, above=True):
