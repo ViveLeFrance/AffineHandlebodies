@@ -162,17 +162,6 @@ def plot_path_3d(path: Dict[complex, List[complex]], origin_fibre, title: str = 
 
     plot.show()
 
-    
-
-def perturb(path: List[complex], radius: float, seed):
-    random.seed(seed)
-    perturbed_path = []
-    for point in path:
-        angle = random.uniform(0,2*np.pi)
-        rand_radius = random.uniform(0, radius)
-        perturbed_path.append(point + rand_radius*complex(np.cos(angle), np.sin(angle)))
-    return perturbed_path
-
 def pl_path(points: List[complex], steps=70):
     path = []
 

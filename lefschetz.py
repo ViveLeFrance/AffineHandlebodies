@@ -216,7 +216,7 @@ def parameterized_fib_crits(fib: LefschetzFibration, fib_param_path: Dict[str, L
     """Compute the critical values of a Lefschetz fibration with parameters specified by 
     a path of complex numbers. """
 
-    if (len(fib_param_path['a']) != len(fib_param_path['b'])) or (len(fib_param_path['a']) != len(fib_param_path['c'])):
+    if (len(fib_param_path['a']) != len(fib_param_path['b'])):
         raise ValueError("The paths must have the same number of points.")
     
     n = len(fib_param_path['a'])
