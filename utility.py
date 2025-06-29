@@ -33,19 +33,17 @@ def set_free_variable_to_one_list(sols: List[dict]):
     return [set_free_variable_to_one(sol) for sol in sols]
 
 
-def sort_by_angle(points: List[complex], origin_fibre: complex = 0, anticlockwise: bool = True):
-    """Sorts a list of points by their argument, starting from the negative real axis."""
+def sort_by_angle(points: List[complex], origin_fibre, anticlockwise: bool = True):
+    """Sorts a list of points in the complex plane by their argument,
+    starting from the negative real axis."""
     points = [complex(point) for point in points]
     
-    #  np.angle returns the argument of a complex number in the range (-pi, pi] starting from
-    #  the positive real line going counterclockwise.
-
     points = sorted(points, key=lambda point: (-np.pi+np.angle(point-origin_fibre))%(2*np.pi))
     if not anticlockwise:
         points.reverse()
     return points
 
-def plot_points_ordered(points: List[complex], title: str = None, fig=None, ax=None, origin_fibre = 0, anticlockwise=True):
+def plot_points_ordered(points: List[complex], origin_fibre, title: str = None, anticlockwise=True):
     """Plots a list of points on the complex plane, ordered anticlockwise by argument."""
     # Sage complex type is not compatible with python's, but can be coerced
     points = [complex(point) for point in points]
@@ -58,8 +56,9 @@ def plot_points_ordered(points: List[complex], title: str = None, fig=None, ax=N
     real = [point.real for point in points]
     imag = [point.imag for point in points]
     
-    if ax is None:
-        fig, ax = plt.subplots()
+    
+    # subplots returns a tuple (figure, axes), we only need axes
+    ax = plt.subplots()[1]
 
     ax.spines['left'].set_position(('data', 0))
     # Move bottom spine to y=0
@@ -68,8 +67,6 @@ def plot_points_ordered(points: List[complex], title: str = None, fig=None, ax=N
     # Remove the top and right spines
     ax.spines['right'].set_color('none')
     ax.spines['top'].set_color('none')
-
-    
     
     ax.set_title(title)
     
@@ -84,9 +81,6 @@ def plot_points_ordered(points: List[complex], title: str = None, fig=None, ax=N
     for index, point in enumerate(points):
         ax.text(point.real+0.05*data_width, point.imag, str(index), fontsize=12, color='blue')
 
-    # return fig, ax
-    plt.ion()
-    # plt.show()
 
 
 def plot_path(path: Dict[complex, List[complex]], title: str = None, origin_fibre=0, anticlockwise=True):
@@ -116,7 +110,7 @@ def color_generator(n: int):
         yield cmap(index)
         index+=1/n
 
-def plot_path_3d(path: Dict[complex, List[complex]], title: str = None, origin_fibre=0, anticlockwise=True, trajectory_color = 'blue'):
+def plot_path_3d(path: Dict[complex, List[complex]], origin_fibre, title: str = None, anticlockwise=True, trajectory_color = 'blue'):
    
 
     points = []
@@ -205,69 +199,6 @@ def pl_path_1(origin_fibre, target_fibre, offset = None, steps=70, above=True):
     return pl_path([origin_fibre, intermediate_point, target_fibre], steps=steps)
 
 
-def trace_preimage(rho: LefschetzFibration, t, path: List[complex], title=None, solvefor=None, origin_fibre=0, anticlockwise=True):
-    if solvefor is None:
-        solvefor = rho.variables[0]
-
-    fibre_rho_t = rho.get_fibre(t, solvefor)
-
-    fibres = []
-
-    for s in path:
-        fibre_rho_s = fibre_rho_t.subs(t=s)
-        fibres.append(NumericalRoots(fibre_rho_s))
-
-    # fibres = np.array(fibres)
-
-    plot_points_real = []
-    plot_points_imag = []
-    for preimage in fibres:
-        plot_points_real.append([value.real for value in preimage])
-        plot_points_imag.append([value.imag for value in preimage])
-
-    fig, ax = plt.subplots()    
-
-    ax.spines['left'].set_position(('data', 0))
-    # Move bottom spine to y=0
-    ax.spines['bottom'].set_position(('data', 0))
-
-    # Remove the top and right spines
-    ax.spines['right'].set_color('none')
-    ax.spines['top'].set_color('none')
-
-    ax.set_title(title)
-
-    init_sols = NumericalRoots(fibre_rho_t.subs(t==path[0]))
-    init_sols = sort_by_angle(init_sols, origin_fibre=origin_fibre, anticlockwise=anticlockwise)
-
-
-    init_real = [value.real for value in init_sols]
-    init_imag = [value.imag for value in init_sols]
-    
-    final_sols = NumericalRoots(fibre_rho_t.subs(t==path[-1]))
-    final_real = [value.real for value in final_sols]
-    final_imag = [value.imag for value in final_sols]
-
-    regular_sols = NumericalRoots(fibre_rho_t.subs(t==path[len(path)//2]))
-    regular_real = [value.real for value in regular_sols]
-    regular_imag = [value.imag for value in regular_sols]
-
-
-    for index, point in enumerate(init_sols):
-        ax.text(point.real+0.05, point.imag, str(index), fontsize=12, color='blue')
-    ax.plot(init_real, init_imag, 'ro', markersize=5)
-    
-    # ax.plot(init_real, init_imag, 'ro', markersize=5)
-    ax.plot(final_real, final_imag, 'co', markersize=5)
-    ax.plot(regular_real, regular_imag, 'o', color='purple', markersize=5)
-
-
-    ax.grid(True)
-
-    ax.plot(plot_points_real, plot_points_imag, 'bo', markersize=2)
-
-    return fig, ax
-
 def plot_pl_path(path: List[complex], steps=70, title=None, spec_points=None):
     points = [complex(point) for point in path]
     real = [point.real for point in points]
@@ -291,41 +222,6 @@ def plot_pl_path(path: List[complex], steps=70, title=None, spec_points=None):
     ax.legend()
     plt.show()
 
-
-def parameterized_fib_crits(fib: LefschetzFibration, fib_param_path: Dict[str, List[complex]]):
-
-    if len(fib_param_path['a']) != len(fib_param_path['b']):
-        raise ValueError("The paths must have the same number of points.")
-    
-    n = len(fib_param_path['a'])
-    crits = {}
-
-    if len(fib.variables) == 2:
-        r1, r2 = var('r1, r2', domain=CC)
-        domain = fib.domain.subs(fib.variables[0]==r1, fib.variables[1]==r2)
-        a_path = fib_param_path['a']
-        b_path = fib_param_path['b']
-    
-        for i in range(n):
-            fib_eq = CC(a_path[i])*r1 + CC(b_path[i])*r2
-            fib_i = LefschetzFibration([r1,r2], domain, fib_eq)
-
-            crits[i] = fib_i.get_critical_values()
-    
-    if len(fib.variables) == 3: 
-        r1, r2, r3 = var('r1, r2, r3', domain=CC)
-        domain = fib.domain.subs(fib.variables[0]==r1, fib.variables[1]==r2, fib.variables[2]==r3)
-        a_path = fib_param_path['a']
-        b_path = fib_param_path['b']
-        c_path = fib_param_path['c']
-    
-        for i in range(n):
-            fib_eq = CC(a_path[i])*r1 + CC(b_path[i])*r2 + CC(c_path[i])*r3
-            fib_i = LefschetzFibration([r1,r2,r3], domain, fib_eq)
-
-            crits[i] = fib_i.get_critical_values()   
-
-    return crits
 
 def plot_paths(paths: Dict[int, List[complex]], origin_fibre_rho=0):
      # Sage complex type is not compatible with python's, but can be coerced
