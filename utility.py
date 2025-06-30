@@ -1,14 +1,9 @@
 from typing import List, Dict
-# from sage.all import var, solve, CC, simplify, Expression, point3d, line3d
 from sage.all import *
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
-from mpl_toolkits.mplot3d import Axes3D
-from scipy.optimize import fsolve
-from dataclasses import dataclass
 import numpy as np
-from typing import Any
-import random
+
 
     
 def NumericalRoots(expr):
@@ -275,7 +270,7 @@ def plot_paths(paths: Dict[int, List[complex]], origin_fibre_rho=0):
 
         ax.scatter(real, imag, color=color, norm=norm, s=1)
 
-    target_points = paths[len(paths)-1]
+    target_points = paths[len(paths)]
     points = [complex(point) for point in target_points]
 
     real = [point.real for point in points]
