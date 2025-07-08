@@ -12,7 +12,7 @@ def NumericalRoots(expr):
     coeffs = [complex(coefficient) for coefficient in coeffs]
     return np.polynomial.polynomial.polyroots(coeffs)
 
-def set_free_variable_to_one(sol: dict):
+def set_free_variable_to_one(sol: dict, substitution=1):
     # Identify the free variable
     free_var = None
     for key in sol.keys():
@@ -20,12 +20,12 @@ def set_free_variable_to_one(sol: dict):
             if str(variable).startswith('r'):
                 free_var = variable
                 # substitute the free variable with 1
-                sol[key] = sol[key].subs(free_var==1)
+                sol[key] = sol[key].subs(free_var==substitution)
 
     return sol
 
-def set_free_variable_to_one_list(sols: List[dict]):
-    return [set_free_variable_to_one(sol) for sol in sols]
+def set_free_variable_to_one_list(sols: List[dict], substitution=1):
+    return [set_free_variable_to_one(sol, substitution=substitution) for sol in sols]
 
 
 def sort_by_angle(points: List[complex], origin_fibre, anticlockwise: bool = True):
