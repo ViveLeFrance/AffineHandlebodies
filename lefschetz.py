@@ -312,6 +312,16 @@ def trace_preimage(rho: LefschetzFibration, path: List[complex], origin_fibre, t
 
     ax.grid(True)
 
-    ax.plot(plot_points_real, plot_points_imag, 'bo', markersize=2)
+    x = np.hstack(plot_points_real)    
+    y = np.hstack(plot_points_imag)
+
+    N= x.size     
+
+    cmap = plt.get_cmap('viridis')
+    gradient = np.arange(N)
+    norm = Normalize(vmin=min(gradient), vmax=max(gradient))
+    colors = cmap(norm(gradient))
+
+    ax.scatter(plot_points_real, plot_points_imag, color = colors,  s=2)
 
     return fig, ax
