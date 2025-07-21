@@ -25,6 +25,7 @@ class LefschetzFibration:
 
         points = solve(constraints, self.variables + [a], solution_dict=True)
 
+
         for p in points:
             del p[a]
 
@@ -262,7 +263,7 @@ def trace_preimage(rho: LefschetzFibration, path: List[complex], origin_fibre, t
     fibres = []
 
     for s in path:
-        fibre_rho_s = fibre_rho_t.subs(t=s)
+        fibre_rho_s = fibre_rho_t.subs(t==s)
         fibres.append(NumericalRoots(fibre_rho_s))
 
     # fibres = np.array(fibres)
