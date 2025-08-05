@@ -79,20 +79,22 @@ def plot_points_ordered(points: List[complex], origin_fibre, title: str = None, 
 
 
 def plot_path(path: Dict[complex, List[complex]], title: str = None, origin_fibre=0, anticlockwise=True):
+    path = {target: [complex(point) for point in path[target]] for target in path.keys()}
+
     plot_points_origin = path[0]
     plot_points_target = path[1]
 
     fig, ax = plot_points_ordered(plot_points_origin, title=title, origin_fibre=origin_fibre, anticlockwise=anticlockwise)
 
-    ax.plot([point.real() for point in plot_points_target], [point.imag() for point in plot_points_target], 'co', markersize=5)
+    ax.plot([point.real for point in plot_points_target], [point.imag for point in plot_points_target], 'co', markersize=5)
 
     path_points_x = []
     path_points_y = []
     for step in path.values():
 
-        path_points_x.extend([point.real() for point in step])
+        path_points_x.extend([point.real for point in step])
         
-        path_points_y.extend([point.imag() for point in step])
+        path_points_y.extend([point.imag for point in step])
 
     ax.plot(path_points_x, path_points_y, 'bo', markersize=2)
 
@@ -106,14 +108,15 @@ def color_generator(n: int):
         index+=1/n
 
 def plot_path_3d(path: Dict[complex, List[complex]], origin_fibre, title: str = None, anticlockwise=True, trajectory_color = 'blue'):
-   
+    path = {target: [complex(point) for point in path[target]] for target in path.keys()}
+
 
     points = []
 
     for index, step in enumerate(path.values()):
         
         for point in step:
-            points.append((point.real(), point.imag(), index/len(path)))
+            points.append((point.real, point.imag, index/len(path)))
 
     n = len(path[0])
 
@@ -132,8 +135,8 @@ def plot_path_3d(path: Dict[complex, List[complex]], origin_fibre, title: str = 
         labels.append(label)
 
 
-    init_points  =[(point.real(), point.imag(), 0) for point in path[0]]
-    final_points = [(point.real(), point.imag(), 1) for point in path[1]]
+    init_points  =[(point.real, point.imag, 0) for point in path[0]]
+    final_points = [(point.real, point.imag, 1) for point in path[1]]
     init_plot = point3d(init_points, size=20, color='red')
     target_plot = point3d(final_points, size=20, color='green')
     trajectory_plot = point3d(points, size=5, color=trajectory_color)
