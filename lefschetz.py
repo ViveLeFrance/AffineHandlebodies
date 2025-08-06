@@ -150,7 +150,7 @@ class Bifibration:
         self.pi = pi
         self.rho = rho
 
-    def get_matching_path(self, origin_fibre=None, target_fibre=None, steps=70, solvefor=None, path=None):
+    def get_matching_path(self, origin_fibre=None, target_fibre=None, steps=None, solvefor=None, path=None):
         """For a vanishing path of pi, the critical values of rho restricted to the fibres
         over the vanishin path are such that two of them will converge, yielding a matching path
         of rho. This function computes the trace of these critical values."""
