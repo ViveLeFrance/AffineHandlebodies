@@ -9,7 +9,7 @@ You can try out the code via Binder in your browser (link below) without install
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/ViveLeFrance/AffineHandlebodies/main?urlpath=lab)
 
-## Run as a Local Install
+## Run locally
 A more seamless experience is provided by running the notebooks locally, which requires [SageMath](https://doc.sagemath.org/html/en/installation/index.html), with version at least 10.2.
 
 The notebooks moreover use `%matplotlib widget` in order to pan and zoom to better inspect the plots produced. This requires the package `ipympl`, which is not included in SageMath by default. If you have trouble finding the Python installation shipped with Sage, you can, for example, install it into your Sage Python environment by launching any notebook with the SageMath kernel, and executing a cell containing the command `pip install ipympl`.
