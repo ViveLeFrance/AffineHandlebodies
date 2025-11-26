@@ -1,11 +1,11 @@
 # AffineHandlebodies
 This collection of notebooks implements the code to perform the calculations used to determine a Weinstein handlebody of a smooth complex affine surface, as described by Casals and Murphy in [CM19](https://www.math.ucdavis.edu/~casals/LefsFronts_Reviewed.pdf). 
 
-It is also intended as a companion repo to the paper (...) to document the various choices that lead to the resulting handlebodies.
+It is also intended as a companion repo to the article [Weinstein Handlebodies for the Painlevé Betti Spaces](https://arxiv.org/abs/2511.17352) to document the various choic(...)es that lead to the resulting handlebodies.
 
 ## Run via Binder
 
-You can try out the code via Binder in your browser (link below) without installing anything on your machine. Note however that binder takes quite long to install the necessary environment (can be of the order of ~20 minutes). 
+You can try out the code via Binder in your browser (link below) without installing anything on your machine. Note however that binder takes quite long to install the necessary environment (it installs the entirety of sage into a container - can be of the order of ~20 minutes), and that your changes do not persist. 
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/ViveLeFrance/AffineHandlebodies/main?urlpath=lab)
 
