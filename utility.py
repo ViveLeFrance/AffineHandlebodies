@@ -157,8 +157,7 @@ def plot_path_3d(path: Dict[complex, List[complex]], origin_fibre, title: str = 
     if title:
         title_text = text3d(title, (0, 0, axis_length + 0.5), color='black', fontsize=20)
         plot += title_text
-
-    plot.show()
+    plot.show(viewer='threejs', online=True)
 
 def pl_path(points: List[complex], steps=70):
     path = []
