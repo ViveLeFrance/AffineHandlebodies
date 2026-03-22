@@ -65,26 +65,44 @@ class LefschetzFibration:
         if variable is None:
             variable = self.variables[0]
 
+        var_names = [str(v) for v in self.variables] + ['w']
+        R = PolynomialRing(QQ, names=var_names)
+        ring_vars = R.gens()
+        coord = dict(zip(var_names, ring_vars))
+        w = coord['w']
 
-        w = var('w', domain=CC)
-        variables = [variable for variable in self.variables]
-        variables.append(w)
-        R = PolynomialRing(CC, names=variables)
+        subs_dict = {v: coord[str(v)] for v in self.variables}
 
-        domain_hom = SR(R(self.domain).homogenize(var='w'))
-        fibre_hom = SR(R(self.fibration).homogenize(var='w'))
+        domain_R = R(self.domain.subs(subs_dict))
+        fibre_R = R((self.fibration - point).subs(subs_dict))
 
-        constraints = [w==0, fibre_hom==0, domain_hom==0]
+        domain_hom = domain_R.homogenize(w)
+        fibre_hom = fibre_R.homogenize(w)
 
-        intersection = solve(constraints, variables, solution_dict=True)
+        I = R.ideal([domain_hom, fibre_hom, w])
 
-        solution = set_free_variable_to_one_list(intersection)
+        # constraints = [w==0, fibre_hom==0, domain_hom==0]
 
-        for sol in solution:
-            if all(sol[variable].is_zero() for variable in variables):
-                solution.remove(sol)
+        # intersection = solve(constraints, variables, solution_dict=True)
 
-        return solution
+        if I.dimension() > 1:
+            raise Exception("Intersection at infinity is of positive dimension.")
+        
+        projective_points = set()
+
+        for v in ring_vars[:-1]:
+            Ichart = R.ideal([domain_hom, fibre_hom, w, v - 1])
+            if Ichart.dimension() == 0:
+                sols = Ichart.variety(QQbar)
+                for sol in sols:
+                    full_sol = {g: sol[g] for g in ring_vars}
+                    nz = next((g for g in ring_vars if full_sol[g] != 0), None)
+                    if nz is None:
+                        continue
+                    normalized = tuple(full_sol[g] / full_sol[nz] for g in ring_vars)
+                    projective_points.add(normalized)
+
+        return projective_points
 
     
     def get_homogenized_domain(self, variable=None):
@@ -115,34 +133,47 @@ class LefschetzFibration:
         transversely. Seidel's result says than the rational function pi/w restricted to 
         {w =/= 0}, i.e., pi, is a Lefschetz fibration if {F = 0} is smooth.
         """
-        
+
+        if variable is None:
+            variable = self.variables[0]
+
         intersection = self.get_fibre_boundary_components(point=origin_fibre, variable=variable)
 
         if len(intersection) == 0:
-            print('The fibration does not vanish at infinity.')
+            print("The fibre has empty intersection with the hyperplane at infinity.")
+            return
+
+        var_names = [str(v) for v in self.variables] + ['w']
+        R = PolynomialRing(QQ, names=var_names)
+        ring_vars = R.gens()
+        coord = dict(zip(var_names, ring_vars))
+        w = coord['w']
+
+        subs_dict = {v: coord[str(v)] for v in self.variables}
+
+        domain_R = R(self.domain.subs(subs_dict))
+        fibre_R = R((self.fibration - origin_fibre).subs(subs_dict))
+
+        domain_hom = domain_R.homogenize(w) 
+        fibre_hom = fibre_R.homogenize(w)
+
+        gradF = [domain_hom.derivative(v) for v in ring_vars]
+        gradpi = [fibre_hom.derivative(v) for v in ring_vars]
+
+        n = len(ring_vars) - 1
+
+        for point in intersection:
+            # point is a tuple in the same order as ring_vars
+            point_dict = dict(zip(ring_vars, point))
+
+            row1 = [df.subs(point_dict) for df in gradF]
+            row2 = [dp.subs(point_dict) for dp in gradpi]
+            row3 = [0] * n + [1]
+
+            M = matrix(QQbar, [row1, row2, row3])
+            print(f"The rank of M at {point} is {M.rank()}.")
         
-        else:
-            w = var('w', domain=CC)
-            variables = [variable for variable in self.variables]
-            variables.append(w)
-            R = PolynomialRing(CC, names=variables)
-
-            domain_hom = SR(R(self.domain).homogenize(var='w'))
-            fibre_hom = SR(R(self.fibration).homogenize(var='w'))
-
-            gradF = [domain_hom.diff(variable) for variable in variables]
-            gradpi = [fibre_hom.diff(variable) for variable in variables]
-
-            n = len(variables)-1
-
-            for point in intersection:
-                row1 = [pdev.subs(point) for pdev in gradF]
-                row2 = [pdev.subs(point) for pdev in gradpi]
-                row3 = [0 for index in range(n)]
-                row3.append(1)
-                M = matrix(CC, [row1, row2, row3])
-                print(f'The rank of M at {point} is {M.rank()}.')
-
+        
     
 class Bifibration:
 
