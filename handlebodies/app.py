@@ -70,20 +70,34 @@ class Handler(BaseHTTPRequestHandler):
         self._send(404, 'not found', 'text/plain')
 
     def do_POST(self):
-        if self.path != '/api/compute':
+        if self.path not in ('/api/compute', '/api/trace', '/api/path'):
             return self._send(404, 'not found', 'text/plain')
         n = int(self.headers.get('Content-Length', 0))
         try:
-            spec = json.loads(self.rfile.read(n) or b'{}')
+            body = json.loads(self.rfile.read(n) or b'{}')
         except json.JSONDecodeError as exc:
             return self._send(400, json.dumps({'ok': False, 'error': str(exc)}),
                               'application/json')
-        from .compute import compute
-        # Only the untouched preset gets the file's own paths; once a field is
-        # edited the spec no longer matches what those paths were written for.
-        paths = PRESET_PATHS if spec.pop('preset', False) else None
         try:
-            result = compute(spec, paths)
+            if self.path == '/api/path':
+                from .compute import sample_path
+                result = sample_path(body['waypoints'],
+                                     steps=body.get('steps', 70),
+                                     rounding=body.get('rounding', 0.0))
+            elif self.path == '/api/trace':
+                from .compute import retrace
+                result = retrace(body['spec'], body['waypoints'],
+                                 steps=body.get('steps', 70),
+                                 rounding=body.get('rounding', 0.0),
+                                 label=body.get('label', 'edited path'),
+                                 level=body.get('level', 'rho'))
+            else:
+                from .compute import compute
+                # Only the untouched preset gets the file's own paths; once a
+                # field is edited the spec no longer matches what those paths
+                # were written for.
+                paths = PRESET_PATHS if body.pop('preset', False) else None
+                result = compute(body, paths)
         except Exception as exc:                      # never kill the server
             result = {'ok': False, 'error': f'{type(exc).__name__}: {exc}'}
         self._send(200, json.dumps(result), 'application/json')

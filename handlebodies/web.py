@@ -6,6 +6,8 @@ embedding a 4 MB library.  The result pans, zooms and rotates offline with no
 kernel, which is what the notebooks needed Sage's threejs viewer for.
 """
 
+import math
+
 import numpy as np
 
 try:
@@ -38,7 +40,39 @@ def _fade(hex_colour, alpha):
 # Each step of a traced path is a separate computation, so the points are drawn
 # as points; the line only joins them up and is kept deliberately faint.
 POINT_SIZE = 4
+POINT_SIZE_3D = 2
 LINE_ALPHA = 0.35
+AXIS_COLOUR = '#444'
+#: height of the t axis relative to the widest of Re and Im
+Z_ASPECT = 0.25
+GRID_COLOUR = 'rgba(0,0,0,0.13)'
+
+
+def _equal_axes(fig):
+    """Mark a figure as wanting equal scaling for its opening view.
+
+    The page turns the recorded bounds into explicit ranges once it knows the
+    pixel size of the plot; deliberately not a scaleanchor, which would also
+    constrain zooming, and a zoom rectangle should be free to be any shape.
+
+    The bounds are worked out here rather than in the page because plotly
+    serialises numpy arrays as base64 typed arrays, which the browser would
+    have to decode before it could measure anything.
+    """
+    xs, ys = [], []
+    for t in fig.data:
+        for src, dest in ((getattr(t, 'x', None), xs), (getattr(t, 'y', None), ys)):
+            if src is None:
+                continue
+            a = np.asarray(src, dtype=object)
+            for v in a.ravel():
+                if isinstance(v, (int, float)) and np.isfinite(v):
+                    dest.append(float(v))
+    meta = dict(equalScale=True)
+    if xs and ys:
+        meta['bounds'] = [min(xs), max(xs), min(ys), max(ys)]
+    fig.update_layout(meta=meta)
+    return fig
 
 
 def points(values, title=None, name='critical values', origin=None,
@@ -63,28 +97,7 @@ def points(values, title=None, name='critical values', origin=None,
             name=origin_name,
             hovertemplate=f'{origin_name}<br>%{{x:.6f}} %{{y:+.6f}}i<extra></extra>'))
     fig.update_layout(title=title, xaxis_title='Re', yaxis_title='Im', **LAYOUT)
-    return fig
-
-
-def _frame(b, highlight, pad=0.25):
-    """Axis ranges that show the collision rather than the whole excursion.
-
-    A branch that swings far away compresses the collision to a point at the
-    default scale, which is precisely what the picture exists to show.  So the
-    initial view is the box around the colliding branches; plotly's autoscale
-    button restores the full extent.  Used for the flat traces only -- the 3-D
-    views show everything.
-    """
-    if not highlight:
-        return None, None
-    sel = b[:, list(highlight)]
-    xs, ys = sel.real, sel.imag
-    dx = max(xs.max() - xs.min(), 1e-9)
-    dy = max(ys.max() - ys.min(), 1e-9)
-    span = max(dx, dy)          # keep it square-ish so shape is not distorted
-    cx, cy = (xs.max() + xs.min()) / 2, (ys.max() + ys.min()) / 2
-    h = span * (0.5 + pad)
-    return [cx - h, cx + h], [cy - h, cy + h]
+    return _equal_axes(fig)
 
 
 def trace(branches, title=None, highlight=None):
@@ -110,28 +123,88 @@ def trace(branches, title=None, highlight=None):
                              marker=dict(size=13, symbol='circle-open',
                                          line=dict(width=2.5, color='#008b9a')),
                              name='end'))
-    fig.update_layout(title=title, xaxis_title='Re', yaxis_title='Im', **LAYOUT)
-    xr, yr = _frame(b, highlight)
-    if xr:
-        fig.update_xaxes(range=xr)
-        fig.update_yaxes(range=yr)
-    return fig
+    fig.update_layout(title=title, xaxis_title='Re', yaxis_title='Im',
+                      # clear of the toolbar, which sits in the top right
+                      legend=dict(yanchor='top', y=0.86), **LAYOUT)
+    # Every branch stays in view; the collision is found by zooming.
+    return _equal_axes(fig)
 
 
-def trace3d(branches, title=None, highlight=None, zlabel='t'):
+def _floor(fig, b, origin, z0, z1, divisions=6):
+    """A grid on the floor plane and a set of axes through the origin.
+
+    plotly's own 3-D grid is drawn on all three walls, which clutters the view
+    with vertical lines of constant t that carry no information; so the floor
+    is drawn here instead and the built-in grid is switched off.
+    """
+    lo_x, hi_x = float(b.real.min()), float(b.real.max())
+    lo_y, hi_y = float(b.imag.min()), float(b.imag.max())
+    o = complex(origin) if origin is not None else 0j
+    lo_x, hi_x = min(lo_x, o.real), max(hi_x, o.real)
+    lo_y, hi_y = min(lo_y, o.imag), max(hi_y, o.imag)
+    px, py = 0.08 * (hi_x - lo_x or 1), 0.08 * (hi_y - lo_y or 1)
+    lo_x, hi_x, lo_y, hi_y = lo_x - px, hi_x + px, lo_y - py, hi_y + py
+
+    xs, ys, zs = [], [], []
+    for gx in np.linspace(lo_x, hi_x, divisions + 1):
+        xs += [gx, gx, None]; ys += [lo_y, hi_y, None]; zs += [z0, z0, None]
+    for gy in np.linspace(lo_y, hi_y, divisions + 1):
+        xs += [lo_x, hi_x, None]; ys += [gy, gy, None]; zs += [z0, z0, None]
+    fig.add_trace(go.Scatter3d(x=xs, y=ys, z=zs, mode='lines',
+                               line=dict(color=GRID_COLOUR, width=1),
+                               hoverinfo='skip', showlegend=False))
+
+    # x, y and t axes through the reference fibre, as in the original plots.
+    # Each spans only its own direction: giving both the larger of the two
+    # widths would push the scene's range out past the data and leave the
+    # branches squeezed into a fraction of the frame.
+    axes = [([lo_x, hi_x], [o.imag, o.imag], [z0, z0]),
+            ([o.real, o.real], [lo_y, hi_y], [z0, z0]),
+            ([o.real, o.real], [o.imag, o.imag], [z0, z1])]
+    for ax, ay, az in axes:
+        fig.add_trace(go.Scatter3d(x=ax, y=ay, z=az, mode='lines',
+                                   line=dict(color=AXIS_COLOUR, width=2),
+                                   hoverinfo='skip', showlegend=False))
+
+    if origin is not None:
+        fig.add_trace(go.Scatter3d(
+            x=[o.real], y=[o.imag], z=[z0], mode='markers',
+            marker=dict(size=4, color='#2ca02c', symbol='diamond'),
+            name='reference fibre',
+            hovertemplate='reference fibre<br>%{x:.6f} %{y:+.6f}i<extra></extra>'))
+
+    return (hi_x - lo_x), (hi_y - lo_y)
+
+
+def _eye(ax, ay, az, pull=1.0):
+    """Camera position scaled to the aspect box.
+
+    plotly fits the box's bounding sphere in the viewport, so a fixed camera
+    leaves an elongated box marooned in white space; the distance has to follow
+    the box's own diagonal.
+    """
+    diagonal = math.sqrt(ax * ax + ay * ay + az * az)
+    direction = (0.62, -0.62, 0.30)
+    norm = math.sqrt(sum(v * v for v in direction))
+    d = pull * diagonal / norm
+    return dict(x=direction[0] * d, y=direction[1] * d, z=direction[2] * d)
+
+
+def trace3d(branches, title=None, highlight=None, zlabel='t', origin=None):
     """Tracked branches with the path parameter as the vertical axis.
 
-    This is the picture the notebooks built with Sage's threejs viewer: each
-    horizontal slice is the set of tracked values over one point of the path.
-    It applies equally to the critical values of rho over a path in the base of
-    pi (a matching path) and to the points of a fibre of rho over a path in the
-    base of rho.
+    Each horizontal slice is the set of tracked values over one point of the
+    path.  Unlike the flat plots, the axes here are stretched to fill the frame
+    rather than held to a common scale: in three dimensions a faithful aspect
+    ratio squeezes an elongated region into an unreadable sliver, and what the
+    picture is for is seeing which branches meet, not measuring distances.
     """
     b = np.asarray(branches)
     steps, n = b.shape
     z = np.linspace(0, 1, steps)
 
     fig = go.Figure()
+    _floor(fig, b, origin, 0.0, 1.0)
     for j in range(n):
         strong = highlight is not None and j in highlight
         colour = _colour(j)
@@ -139,22 +212,33 @@ def trace3d(branches, title=None, highlight=None, zlabel='t'):
             x=b[:, j].real, y=b[:, j].imag, z=z, mode='lines+markers',
             line=dict(color=_fade(colour, LINE_ALPHA if strong else LINE_ALPHA * 0.7),
                       width=2),
-            marker=dict(color=colour, size=POINT_SIZE - 1 if strong else POINT_SIZE - 2),
+            marker=dict(color=colour,
+                        size=POINT_SIZE_3D if strong else POINT_SIZE_3D * 0.75),
             opacity=1.0 if strong else 0.8, name=f'branch {j}',
             hovertemplate=(f'branch {j}<br>%{{x:.6f}} %{{y:+.6f}}i'
                            f'<br>{zlabel}=%{{z:.4f}}<extra></extra>')))
     fig.add_trace(go.Scatter3d(
         x=b[0].real, y=b[0].imag, z=[z[0]] * n, mode='markers+text',
         text=[str(j) for j in range(n)],
-        marker=dict(size=4, color='#d62728'), name='start'))
+        marker=dict(size=3, color='#d62728'), name='start'))
     fig.add_trace(go.Scatter3d(
         x=b[-1].real, y=b[-1].imag, z=[z[-1]] * n, mode='markers',
-        marker=dict(size=4, color='#2ca02c'), name='end'))
-    # Deliberately unclamped: every critical value of rho and its whole
-    # trajectory has to stay visible here, since the point of the 3-D view is
-    # to see them all move together.  Rotating and zooming is how you inspect
-    # a particular pair.
-    scene = dict(xaxis_title='Re', yaxis_title='Im', zaxis_title=zlabel)
-    fig.update_layout(title=title, scene=scene, **LAYOUT)
-    return fig
+        marker=dict(size=3, color='#2ca02c'), name='end'))
 
+    # Re and Im each fill the frame; t is kept short so the slices stay legible.
+    ar_x = ar_y = 1.0
+    bare = dict(showgrid=False, showbackground=False, zeroline=False)
+    fig.update_layout(
+        title=title,
+        scene=dict(
+            xaxis=dict(title='Re', **bare),
+            yaxis=dict(title='Im', **bare),
+            zaxis=dict(title=zlabel, **bare),
+            aspectmode='manual',
+            aspectratio=dict(x=ar_x, y=ar_y, z=Z_ASPECT),
+            camera=dict(eye=_eye(ar_x, ar_y, Z_ASPECT))),
+        height=620,
+        legend=dict(yanchor='top', y=0.98, xanchor='left', x=0.99),
+        margin=dict(l=0, r=0, t=42, b=0), template='plotly_white',
+        hovermode='closest')
+    return fig

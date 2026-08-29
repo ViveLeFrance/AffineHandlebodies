@@ -42,6 +42,20 @@ button:disabled{background:#9bb8cf;cursor:default}
 .fig{margin:.5rem 0 1.3rem}
 .cap{color:var(--muted);font-size:.85rem;margin:.1rem 0 0}
 .hidden{display:none}
+.picker{display:grid;grid-template-columns:0.82fr 1.18fr;gap:1rem;align-items:start;
+        border:1px solid var(--line);border-radius:8px;padding:.8rem;margin:1rem 0}
+@media (max-width:900px){.picker{grid-template-columns:1fr}}
+.picker h3{font-size:.95rem;margin:0 0 .4rem;color:var(--fg)}
+.tools{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-top:.5rem}
+.tools label{font-size:.82rem}
+.tools input[type=number]{width:4.5rem;padding:.25rem .35rem}
+.tools input[type=range]{width:7rem;vertical-align:middle}
+.tools button{margin:0;padding:.32rem .8rem;font-size:.85rem}
+.tools button.ghost{background:#fff;color:var(--accent);border:1px solid #bcd4e6}
+.keys{color:var(--muted);font-size:.78rem;margin:.45rem 0 0}
+.corner{display:none;align-items:center;gap:.4rem}
+.corner.on{display:flex}
+.selnote{color:var(--accent);font-size:.8rem;font-weight:600}
 button.add{margin:.15rem 0 0;padding:.22rem .6rem;background:#fff;color:var(--accent);
   border:1px solid #bcd4e6;font-size:.82rem;font-weight:600}
 button.del{margin:0;padding:.1rem .45rem;background:#fff;color:var(--muted);
@@ -145,14 +159,61 @@ async function post(body){
   return r.json();
 }
 
+// Equal scaling is the opening view, not a constraint: the ranges are worked
+// out here from the plot's pixel size and written into the layout, so plotly's
+// "reset axes" comes back to them while a zoom rectangle stays unconstrained.
+function equalScaleRanges(fig, widthPx){
+  const m = Object.assign({l: 80, r: 80, t: 100, b: 80}, fig.layout.margin || {});
+  const h = (fig.layout.height || 450) - m.t - m.b;
+  const w = (widthPx || 700) - m.l - m.r;
+  if (!(w > 10 && h > 10)) return null;
+  const b = (fig.layout.meta || {}).bounds || localBounds(fig);
+  if (!b) return null;
+  const dx = (b[1] - b[0]) || 1, dy = (b[3] - b[2]) || 1;
+  const cx = (b[1] + b[0]) / 2, cy = (b[3] + b[2]) / 2;
+  const unit = Math.max(dx / w, dy / h) * 1.08;      // same units per pixel
+  return {xaxis: {range: [cx - unit * w / 2, cx + unit * w / 2]},
+          yaxis: {range: [cy - unit * h / 2, cy + unit * h / 2]}};
+}
+
+// Traces built in the page (the editor's own) carry plain arrays, so their
+// bounds can be measured here; server-built figures bring theirs in meta.
+function localBounds(fig){
+  let lo = [Infinity, Infinity], hi = [-Infinity, -Infinity];
+  for (const tr of fig.data){
+    if (tr.type === 'scatter3d') continue;
+    for (const [k, arr] of [[0, tr.x], [1, tr.y]]){
+      if (!Array.isArray(arr)) continue;
+      for (const v of arr)
+        if (typeof v === 'number' && isFinite(v)){
+          if (v < lo[k]) lo[k] = v;
+          if (v > hi[k]) hi[k] = v;
+        }
+    }
+  }
+  return isFinite(lo[0]) && isFinite(lo[1]) ? [lo[0], hi[0], lo[1], hi[1]] : null;
+}
+
+function withOpeningView(fig, div){
+  if (!fig.layout || !fig.layout.meta || !fig.layout.meta.equalScale) return fig;
+  const r = equalScaleRanges(fig, div.clientWidth || div.offsetWidth);
+  if (!r) return fig;
+  const layout = Object.assign({}, fig.layout);
+  layout.xaxis = Object.assign({}, layout.xaxis, r.xaxis);
+  layout.yaxis = Object.assign({}, layout.yaxis, r.yaxis);
+  return {data: fig.data, layout};
+}
+
 function plot(host, figure, caption){
   const wrap = document.createElement('div'); wrap.className = 'fig';
   const div = document.createElement('div'); wrap.appendChild(div);
   if (caption){ const p = document.createElement('p');
     p.className='cap'; p.textContent = caption; wrap.appendChild(p); }
   host.appendChild(wrap);
-  Plotly.newPlot(div, figure.data, figure.layout,
+  const shown = withOpeningView(figure, div);
+  Plotly.newPlot(div, shown.data, shown.layout,
                  {displaylogo:false, responsive:true});
+  return div;
 }
 
 // MathJax is loaded async, so a block can be written before it exists.
@@ -174,6 +235,18 @@ function chips(items){
 function showError(host, msg){
   host.innerHTML = `<div class="err">${esc(msg)}</div>`;
 }
+
+// A failure while rendering must not leave a blank page with no explanation.
+window.addEventListener('error', ev => {
+  const host = $('piout') || document.querySelector('main');
+  if (host && !host.dataset.failed){
+    host.dataset.failed = '1';
+    const div = document.createElement('div');
+    div.className = 'err';
+    div.textContent = `${ev.message}  (line ${ev.lineno}:${ev.colno})`;
+    host.appendChild(div);
+  }
+});
 
 function renderPi(r){
   const host = $('piout');
@@ -213,11 +286,19 @@ function renderRho(r){
 
   h = document.createElement('h2'); h.textContent = 'Vanishing cycles of \u03c1';
   host.appendChild(h);
-  for (const v of q.vanishing) plot(host, v.figure, v.name + ' \u2014 ' + v.result);
+  for (const v of q.vanishing){
+    if (v.target === null || v.target === undefined)
+      plot(host, v.figure, v.name + ' \u2014 ' + v.result);   // path fixed in the example file
+    else addPicker(host, v, q.values, q.origin_xy, 'rho');
+  }
 
   h = document.createElement('h2'); h.textContent = 'Matching paths induced by \u03c0';
   host.appendChild(h);
-  for (const m of q.matching) plot(host, m.figure, m.name + ' \u2014 ' + m.result);
+  for (const m of q.matching){
+    if (m.target === null || m.target === undefined)
+      plot(host, m.figure, m.name + ' \u2014 ' + m.result);
+    else addPicker(host, m, r.pi.values, r.pi.origin_xy, 'pi');
+  }
 }
 
 $('fpi').addEventListener('submit', async ev => {
@@ -241,6 +322,251 @@ $('frho').addEventListener('submit', async ev => {
 });
 
 $('addparam').addEventListener('click', () => { addParam(); touched(); });
+
+// ---- path picker -------------------------------------------------------
+// The left figure is the path in rho's base; the right is what tracing along
+// it produces.  Editing the path and recomputing is how a matching path other
+// than the straight one gets found.
+
+const EDITORS = {};
+
+function untitled(fig){
+  // inside a picker the heading already says what this is, and a title in the
+  // narrow column collides with plotly's toolbar
+  const solid = !!(fig.layout && fig.layout.scene);
+  const layout = Object.assign({}, fig.layout, {title: null,
+    height: solid ? (fig.layout.height || 620) : 440,
+    margin: Object.assign({}, fig.layout.margin || {}, {t: 12})});
+  return {data: fig.data, layout};
+}
+
+function defaultWaypoints(item, marks, origin){
+  // the straight vanishing path this entry was computed with
+  const target = marks[item.target] || [0, 0];
+  return [[origin[0], origin[1]], [target[0], target[1]]];
+}
+
+function editorTraces(wp, marks, origin){
+  return [
+    {x: marks.map(m => m[0]), y: marks.map(m => m[1]), mode: 'markers+text',
+     text: marks.map((_, i) => String(i)), textposition: 'top right',
+     marker: {size: 9, color: '#d62728'}, name: 'critical values',
+     hovertemplate: '%{text}: %{x:.4f} %{y:+.4f}i<extra></extra>'},
+    {x: [origin[0]], y: [origin[1]], mode: 'markers',
+     marker: {size: 13, color: '#2ca02c', symbol: 'diamond'},
+     name: 'reference fibre', hoverinfo: 'skip'},
+    {x: [], y: [], mode: 'lines', line: {color: '#1f77b4', width: 2},
+     name: 'path', hoverinfo: 'skip'},
+    {x: wp.map(p => p[0]), y: wp.map(p => p[1]), mode: 'markers',
+     marker: cornerStyle(wp.length, -1),
+     name: 'corners', hovertemplate: '%{x:.4f} %{y:+.4f}i<extra></extra>'},
+  ];
+}
+
+// The ends of a vanishing path are the reference fibre and the critical value;
+// moving either would stop it being a vanishing path for that value, so they
+// are drawn as locked and refuse to be dragged or removed.
+function cornerStyle(n, sel){
+  const colour = [], size = [], symbol = [];
+  for (let i = 0; i < n; i++){
+    const locked = (i === 0 || i === n - 1);
+    colour.push(locked ? '#9aa0a6' : (i === sel ? '#ff7f0e' : '#1f77b4'));
+    size.push(locked ? 9 : (i === sel ? 15 : 11));
+    symbol.push(locked ? 'square' : 'circle');
+  }
+  return {color: colour, size, symbol, line: {color: '#fff', width: 2}};
+}
+
+function isLocked(ed, i){ return i === 0 || i === ed.wp.length - 1; }
+
+const EDITOR_LAYOUT = {
+  template: 'plotly_white', margin: {l: 44, r: 12, t: 10, b: 38},
+  height: 340, xaxis: {title: 'Re'}, yaxis: {title: 'Im'},
+  showlegend: false, hovermode: 'closest',
+};
+
+function pixelToData(gd, ev){
+  const layer = gd.querySelector('.nsewdrag');
+  const fl = gd._fullLayout;
+  if (!layer || !fl || !fl.xaxis || !fl.xaxis.p2d) return null;
+  const r = layer.getBoundingClientRect();
+  return [fl.xaxis.p2d(ev.clientX - r.left), fl.yaxis.p2d(ev.clientY - r.top)];
+}
+
+function nearestWaypoint(gd, ev, wp){
+  const layer = gd.querySelector('.nsewdrag');
+  const fl = gd._fullLayout;
+  if (!layer || !fl) return -1;
+  const r = layer.getBoundingClientRect();
+  const px = ev.clientX - r.left, py = ev.clientY - r.top;
+  let best = -1, bestD = 14;              // pixels
+  wp.forEach((p, i) => {
+    const d = Math.hypot(fl.xaxis.d2p(p[0]) - px, fl.yaxis.d2p(p[1]) - py);
+    if (d < bestD) { bestD = d; best = i; }
+  });
+  return best;
+}
+
+function insertionIndex(wp, pt){
+  // put the new corner into whichever segment it lies closest to
+  let best = wp.length - 1, bestD = Infinity;
+  for (let i = 0; i < wp.length - 1; i++){
+    const [ax, ay] = wp[i], [bx, by] = wp[i + 1];
+    const vx = bx - ax, vy = by - ay;
+    const len2 = vx * vx + vy * vy || 1;
+    let t = ((pt[0] - ax) * vx + (pt[1] - ay) * vy) / len2;
+    t = Math.max(0, Math.min(1, t));
+    const d = Math.hypot(pt[0] - (ax + t * vx), pt[1] - (ay + t * vy));
+    if (d < bestD) { bestD = d; best = i + 1; }
+  }
+  return best;
+}
+
+function redrawPath(ed, preview){
+  Plotly.restyle(ed.gd, {x: [ed.wp.map(p => p[0])], y: [ed.wp.map(p => p[1])],
+                         marker: [cornerStyle(ed.wp.length, ed.sel)]}, [3]);
+  if (preview !== false) refreshPreview(ed);
+  showCornerControl(ed);
+}
+
+// The rounded path is drawn by asking the server for it, so the curve shown is
+// the one that will actually be traced rather than a second implementation.
+async function refreshPreview(ed){
+  const token = ++ed.token;
+  try {
+    const r = await fetch('/api/path', {method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({waypoints: ed.wp, steps: Number(ed.steps.value) || 70,
+                            rounding: ed.radius})}).then(x => x.json());
+    if (token !== ed.token || !r.ok) return;
+    Plotly.restyle(ed.gd, {x: [r.path.map(p => p[0])], y: [r.path.map(p => p[1])]}, [2]);
+  } catch (e) { /* preview only */ }
+}
+
+function showCornerControl(ed){
+  const on = ed.sel > 0 && ed.sel < ed.wp.length - 1;
+  ed.corner.classList.toggle('on', on);
+  if (on){
+    ed.round.value = ed.radius[ed.sel] || 0;
+    ed.selnote.textContent = 'corner ' + ed.sel;
+  }
+}
+
+function attachEditing(ed){
+  const gd = ed.gd;
+  let dragging = -1;
+  gd.addEventListener('mousedown', ev => {
+    const hit = nearestWaypoint(gd, ev, ed.wp);
+    if (hit < 0) return;
+    if (isLocked(ed, hit)){                           // ends are fixed
+      ev.preventDefault(); ev.stopPropagation(); return;
+    }
+    if (ev.altKey || ev.ctrlKey || ev.metaKey){       // remove a corner
+      ed.wp.splice(hit, 1); ed.radius.splice(hit, 1);
+      if (ed.sel === hit) ed.sel = -1;
+      else if (ed.sel > hit) ed.sel--;
+      redrawPath(ed);
+      ev.preventDefault(); ev.stopPropagation(); return;
+    }
+    ed.sel = hit;                                     // clicking selects it
+    dragging = hit;
+    redrawPath(ed, false);
+    ev.preventDefault(); ev.stopPropagation();
+  }, true);
+  window.addEventListener('mousemove', ev => {
+    if (dragging < 0) return;
+    const pt = pixelToData(gd, ev);
+    if (pt){ ed.wp[dragging] = pt; redrawPath(ed, false); }
+  });
+  window.addEventListener('mouseup', () => {
+    if (dragging >= 0){ dragging = -1; refreshPreview(ed); }
+  });
+  gd.addEventListener('click', ev => {
+    if (!ev.shiftKey) return;                          // shift-click adds
+    const pt = pixelToData(gd, ev);
+    if (!pt) return;
+    const at = insertionIndex(ed.wp, pt);
+    ed.wp.splice(at, 0, pt); ed.radius.splice(at, 0, 0);
+    ed.sel = at;
+    redrawPath(ed);
+    ev.preventDefault(); ev.stopPropagation();
+  }, true);
+}
+
+async function recompute(key){
+  const ed = EDITORS[key];
+  ed.button.disabled = true; ed.button.textContent = 'computing\u2026';
+  try {
+    const r = await fetch('/api/trace', {method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({spec: spec(true), waypoints: ed.wp,
+                            steps: Number(ed.steps.value) || 70,
+                            rounding: ed.radius, level: ed.level,
+                            label: ed.label})}).then(x => x.json());
+    if (!r.ok){ showError(ed.out, r.error || 'failed'); return; }
+    ed.out.innerHTML = '';
+    plot(ed.out, untitled(r.figure), null);
+  } catch (e){ showError(ed.out, e.message); }
+  finally { ed.button.disabled = false; ed.button.textContent = 'Recompute'; }
+}
+
+function addPicker(host, v, marks, origin, level){
+  const key = level + v.target;
+  const box = document.createElement('div'); box.className = 'picker';
+  box.innerHTML = `
+    <div>
+      <h3>${esc(v.name)} &mdash; path in the base of ${level === 'pi' ? '&pi;' : '&rho;'}</h3>
+      <div id="ed-${key}"></div>
+      <div class="tools">
+        <label>samples <input type="number" id="st-${key}" min="8" max="2000" value="70"></label>
+        <span class="corner" id="cn-${key}">
+          <span class="selnote" id="sn-${key}"></span>
+          <label>rounding <input type="range" id="rd-${key}" min="0" max="1" step="0.05" value="0"></label>
+        </span>
+        <button id="go-${key}">Recompute</button>
+        <button class="ghost" id="rs-${key}">Reset</button>
+      </div>
+      <p class="keys">shift-click to add a corner &middot; click one to select it, drag to move
+         &middot; alt-click to remove &middot; the ends are fixed</p>
+    </div>
+    <div>
+      <h3>${level === 'pi' ? 'matching path along it' : 'collisions along it'}</h3>
+      <div id="out-${key}"></div>
+    </div>`;
+  host.appendChild(box);
+
+  const wp = defaultWaypoints(v, marks, origin);
+  const gd = $(`ed-${key}`);
+  const edFig = withOpeningView(
+    {data: editorTraces(wp, marks, origin),
+     layout: Object.assign({meta: {equalScale: true}}, EDITOR_LAYOUT)}, gd);
+  Plotly.newPlot(gd, edFig.data, edFig.layout,
+                 {displaylogo: false, responsive: true});
+  const out = $(`out-${key}`);
+  const shown = withOpeningView(untitled(v.figure), out);
+  Plotly.newPlot(out, shown.data, shown.layout,
+                 {displaylogo: false, responsive: true});
+
+  const ed = EDITORS[key] = {wp, gd, out, label: v.name, level, sel: -1, token: 0,
+    radius: wp.map(() => 0),
+    steps: $(`st-${key}`), round: $(`rd-${key}`), corner: $(`cn-${key}`),
+    selnote: $(`sn-${key}`), button: $(`go-${key}`)};
+  attachEditing(ed);
+  redrawPath(ed);
+  ed.button.addEventListener('click', () => recompute(key));
+  ed.round.addEventListener('input', () => {
+    if (ed.sel > 0 && ed.sel < ed.wp.length - 1){
+      ed.radius[ed.sel] = Number(ed.round.value);
+      refreshPreview(ed);
+    }
+  });
+  ed.steps.addEventListener('change', () => refreshPreview(ed));
+  $(`rs-${key}`).addEventListener('click', () => {
+    ed.wp = defaultWaypoints(v, marks, origin);
+    ed.radius = ed.wp.map(() => 0); ed.sel = -1;
+    redrawPath(ed);
+  });
+}
 
 // Pre-fill from an example file. The server substitutes the preset into the
 // placeholder below, so there is nothing to wait for.

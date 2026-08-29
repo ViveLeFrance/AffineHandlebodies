@@ -43,6 +43,7 @@ def surface_and_pi(spec, paths=None):
         'n_values': len(cv),
         'n_points': pi.n_critical_points(),
         'punctures': len(ranks),
+        'origin_xy': [pi.origin_c.real, pi.origin_c.imag],
         'ranks': [r for _, r in ranks],
         'values': [[v.real, v.imag] for v in cv],
         'figure': _fig(R.points(cv, title='Critical values of pi',
@@ -64,6 +65,7 @@ def rho_section(study):
         'n_values': len(cv),
         'n_points': rho.n_critical_points(),
         'values': [[v.real, v.imag] for v in cv],
+        'origin_xy': [rho.origin_c.real, rho.origin_c.imag],
         'critical_figure': _fig(R.points(
             cv, title='Critical values of rho', origin=rho.origin_c,
             origin_name=f'reference fibre {rho.origin}')),
@@ -79,23 +81,28 @@ def rho_section(study):
         i, j, gap = m['collision']
         return f"points {i} and {j} collide (gap {gap:.1e})"
 
+    n_rho = len(cv)
     out['vanishing'] = [{
         'name': m['name'], 'key': _slug(m['name']),
+        'target': i if i < n_rho else None,
         'result': described(m), 'closed': m['closed'],
         'figure': _fig(R.trace(
             m['branches'], title=f"rho: {m['name']} -- {described(m)}",
             highlight=None if m['closed'] else m['collision'][:2])),
-    } for m in study.vanishing_cycles()]
+    } for i, m in enumerate(study.vanishing_cycles())]
 
+    n_pi = len(study.cv.pi)
     out['matching'] = [{
         'name': m['name'], 'key': _slug(m['name']),
+        'target': i if i < n_pi else None,
         'result': described(m).replace('points', 'branches'),
         'closed': m['closed'],
         'figure': _fig(R.trace3d(
             m['branches'],
             title=f"pi: {m['name']} -- {described(m).replace('points','branches')}",
-            highlight=None if m['closed'] else m['collision'][:2])),
-    } for m in study.matching_paths()]
+            highlight=None if m['closed'] else m['collision'][:2],
+            origin=rho.origin_c)),
+    } for i, m in enumerate(study.matching_paths())]
     return out
 
 
@@ -142,3 +149,66 @@ def _tex_block(fibration, symbol, variables, fibre_expr):
         rf'{symbol}^{{-1}}({pt}) &= \left\{{\, {sp.latex(fibre_expr)} = 0 \,\right\}}',
     ]
     return r'\begin{aligned}' + r' \\[2pt] '.join(lines) + r'\end{aligned}'
+
+
+def _described(m):
+    if m['closed']:
+        return f"monodromy {m['monodromy']}"
+    i, j, gap = m['collision']
+    return f"points {i} and {j} collide (gap {gap:.1e})"
+
+
+def retrace(spec, waypoints, steps=70, rounding=0.0, label='edited path',
+            level='rho'):
+    """Trace along a path the user has drawn.
+
+    At the rho level this follows the points of rho's fibre; at the pi level it
+    follows rho's critical values over the fibres of pi, which is the matching
+    path.  `waypoints` are the corners as [re, im] pairs; the rest of the
+    specification is the one the page already computed with.
+    """
+    from . import web as R
+    from .fibration import collision, is_closed, monodromy
+    from .paths import rounded_path
+
+    study = Study(name=spec.get('name', 'surface'),
+                  domain=spec['domain'], params=spec.get('params') or None,
+                  pi=spec['pi'], rho=spec['rho'])
+    # rounding is one value per waypoint (or a single number for all of them)
+    path = rounded_path([complex(a, b) for a, b in waypoints],
+                        steps=int(steps), rounding=rounding)
+
+    if level == 'pi':
+        branches = study.bifibration.matching_path(path)
+    else:
+        branches = study.rho.trace_fibre(path)
+
+    closed = is_closed(path)
+    m = {'name': label, 'closed': closed,
+         'monodromy': monodromy(branches) if closed else None,
+         'collision': None if closed else collision(branches)}
+    text = _described(m)
+    highlight = None if closed else m['collision'][:2]
+    if level == 'pi':
+        text = text.replace('points', 'branches')
+        figure = R.trace3d(branches, title=f'{label} -- {text}',
+                           highlight=highlight, origin=study.rho.origin_c)
+    else:
+        figure = R.trace(branches, title=f'{label} -- {text}',
+                         highlight=highlight)
+    return {
+        'ok': True,
+        'result': text,
+        'closed': closed,
+        'steps': len(path),
+        'figure': _fig(figure),
+        'path': [[float(p.real), float(p.imag)] for p in path],
+    }
+
+
+def sample_path(waypoints, steps=70, rounding=0.0):
+    """Just the sampled path -- no tracing, so this is cheap enough to preview."""
+    from .paths import rounded_path
+    path = rounded_path([complex(a, b) for a, b in waypoints],
+                        steps=int(steps), rounding=rounding)
+    return {'ok': True, 'path': [[float(p.real), float(p.imag)] for p in path]}
