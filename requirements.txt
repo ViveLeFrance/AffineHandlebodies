@@ -1,0 +1,10 @@
+# Core computation. These are all that handlebodies.algebra / .fibration need.
+sympy>=1.12
+numpy>=1.24
+
+# Rendering.
+plotly>=5.18       # interactive figures in the page
+
+# Optional, not installed by pip: if the "Singular" binary is on the PATH it is
+# used for the Groebner work, which makes higher-degree surfaces feasible.
+# Without it everything still runs on sympy alone.

@@ -1,0 +1,1720 @@
+{
+ "p1": {
+  "summary": {
+   "domain": "x*y*z - x - y + 1",
+   "smooth": true,
+   "fibre": "-5*x**2*y + 5*x*y**2 - I*x*y**2 - x - y + 1",
+   "pi_values": 5,
+   "pi_points": 5,
+   "rho_fibre": "-30*y**3 + 2*I*y**3 + y + 1",
+   "rho_values": 6,
+   "rho_points": 6,
+   "punctures": 3,
+   "ranks": [
+    3,
+    3,
+    3
+   ],
+   "transverse": true
+  },
+  "pi_values": [
+   [
+    -5.929490239651368,
+    -7.666809927892787
+   ],
+   [
+    7.149225315422871,
+    -0.8386923116334593
+   ],
+   [
+    7.522357227214128,
+    0.4844063185957866
+   ],
+   [
+    -4.486067467235244,
+    7.914554413558143
+   ],
+   [
+    -3.256024835750388,
+    1.1065415073723164
+   ]
+  ],
+  "rho_values": [
+   [
+    -3.1093576533525518,
+    -0.3916155680678068
+   ],
+   [
+    -0.494334514450627,
+    -1.8870518293857217
+   ],
+   [
+    1.5738234120192465,
+    -0.8460653356663749
+   ],
+   [
+    0.8901975501195093,
+    -0.002965546047826157
+   ],
+   [
+    1.5536776717968852,
+    1.238711780199183
+   ],
+   [
+    -0.4140064661324624,
+    1.8889864989685465
+   ]
+  ],
+  "matching": [
+   {
+    "path": "vanishing 0",
+    "closed": false,
+    "result": [
+     0,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 1",
+    "closed": false,
+    "result": [
+     3,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 2",
+    "closed": false,
+    "result": [
+     2,
+     3
+    ]
+   },
+   {
+    "path": "vanishing 3",
+    "closed": false,
+    "result": [
+     0,
+     4
+    ]
+   },
+   {
+    "path": "vanishing 4",
+    "closed": false,
+    "result": [
+     2,
+     4
+    ]
+   }
+  ],
+  "vanishing": [
+   {
+    "path": "vanishing 0",
+    "closed": false,
+    "result": [
+     0,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 1",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 2",
+    "closed": false,
+    "result": [
+     0,
+     1
+    ]
+   },
+   {
+    "path": "vanishing 3",
+    "closed": false,
+    "result": [
+     0,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 4",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 5",
+    "closed": false,
+    "result": [
+     0,
+     1
+    ]
+   },
+   {
+    "path": "trivial circle",
+    "closed": true,
+    "result": [
+     0,
+     1,
+     2
+    ]
+   }
+  ]
+ },
+ "p2": {
+  "summary": {
+   "domain": "x*y*z - x + 2*y - z - 1",
+   "smooth": true,
+   "fibre": "-3*x**2*y/10 - x*y**2/10 - 7*x/10 + 21*y/10 - 1",
+   "pi_values": 6,
+   "pi_points": 6,
+   "rho_fibre": "y**3/160 + 91*y/40 - 1",
+   "rho_values": 6,
+   "rho_points": 6,
+   "punctures": 3,
+   "ranks": [
+    3,
+    3,
+    3
+   ],
+   "transverse": true
+  },
+  "pi_values": [
+   [
+    -1.7302108177715045,
+    0.0
+   ],
+   [
+    -0.7225575032349837,
+    -1.6249903932869452
+   ],
+   [
+    0.7412513150493447,
+    -1.4122889247143706
+   ],
+   [
+    0.4428231941427825,
+    0.0
+   ],
+   [
+    0.7412513150493447,
+    1.4122889247143706
+   ],
+   [
+    -0.7225575032349837,
+    1.6249903932869452
+   ]
+  ],
+  "rho_values": [
+   [
+    -7.263433263402164,
+    0.0
+   ],
+   [
+    -7.971115448183839,
+    -1.2724567450910451
+   ],
+   [
+    7.8320614221745855,
+    -2.3878600321019054
+   ],
+   [
+    7.5415413154206705,
+    0.0
+   ],
+   [
+    7.8320614221745855,
+    2.3878600321019054
+   ],
+   [
+    -7.971115448183839,
+    1.2724567450910451
+   ]
+  ],
+  "matching": [
+   {
+    "path": "vanishing 0",
+    "closed": false,
+    "result": [
+     2,
+     4
+    ]
+   },
+   {
+    "path": "vanishing 1",
+    "closed": false,
+    "result": [
+     2,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 2",
+    "closed": false,
+    "result": [
+     1,
+     4
+    ]
+   },
+   {
+    "path": "vanishing 3",
+    "closed": false,
+    "result": [
+     1,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 4",
+    "closed": false,
+    "result": [
+     2,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 5",
+    "closed": false,
+    "result": [
+     1,
+     4
+    ]
+   }
+  ],
+  "vanishing": [
+   {
+    "path": "vanishing 0",
+    "closed": false,
+    "result": [
+     0,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 1",
+    "closed": false,
+    "result": [
+     0,
+     1
+    ]
+   },
+   {
+    "path": "vanishing 2",
+    "closed": false,
+    "result": [
+     0,
+     1
+    ]
+   },
+   {
+    "path": "vanishing 3",
+    "closed": false,
+    "result": [
+     0,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 4",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 5",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   }
+  ]
+ },
+ "p2fn": {
+  "summary": {
+   "domain": "x*y*z + x - y + z + 1",
+   "smooth": true,
+   "fibre": "3*x**2*z - 2*x*z**2 - 2*x + 3*z + 1",
+   "pi_values": 6,
+   "pi_points": 6,
+   "rho_fibre": "5*z**3/12 + 10*z/3 + 1",
+   "rho_values": 6,
+   "rho_points": 6,
+   "punctures": 3,
+   "ranks": [
+    3,
+    3,
+    3
+   ],
+   "transverse": true
+  },
+  "pi_values": [
+   [
+    -1.8431119863915288,
+    -2.662018542456933
+   ],
+   [
+    -2.235510163146406,
+    -4.431891534383124
+   ],
+   [
+    3.0786221495379347,
+    -6.938622091641483
+   ],
+   [
+    3.0786221495379347,
+    6.938622091641483
+   ],
+   [
+    -2.235510163146406,
+    4.431891534383124
+   ],
+   [
+    -1.8431119863915288,
+    2.662018542456933
+   ]
+  ],
+  "rho_values": [
+   [
+    -3.0413970580111838,
+    0.0
+   ],
+   [
+    -2.63333001500697,
+    -1.423719329265105
+   ],
+   [
+    2.4709290101556447,
+    -2.9246600702680925
+   ],
+   [
+    3.366199067713834,
+    0.0
+   ],
+   [
+    2.4709290101556447,
+    2.9246600702680925
+   ],
+   [
+    -2.63333001500697,
+    1.423719329265105
+   ]
+  ],
+  "matching": [
+   {
+    "path": "vanishing 0",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 1",
+    "closed": false,
+    "result": [
+     1,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 2",
+    "closed": false,
+    "result": [
+     1,
+     4
+    ]
+   },
+   {
+    "path": "vanishing 3",
+    "closed": false,
+    "result": [
+     2,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 4",
+    "closed": false,
+    "result": [
+     1,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 5",
+    "closed": false,
+    "result": [
+     4,
+     5
+    ]
+   }
+  ],
+  "vanishing": [
+   {
+    "path": "vanishing 0",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 1",
+    "closed": false,
+    "result": [
+     0,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 2",
+    "closed": false,
+    "result": [
+     0,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 3",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 4",
+    "closed": false,
+    "result": [
+     0,
+     1
+    ]
+   },
+   {
+    "path": "vanishing 5",
+    "closed": false,
+    "result": [
+     0,
+     1
+    ]
+   },
+   {
+    "path": "matching 0-2",
+    "closed": false,
+    "result": [
+     0,
+     1
+    ]
+   }
+  ]
+ },
+ "p3d6": {
+  "summary": {
+   "domain": "x**2 + x*y*z + y**2 - 1",
+   "smooth": true,
+   "fibre": "7*x**2*y/10 + x**2 - 3*I*x*y**2/10 + y**2 - 1",
+   "pi_values": 7,
+   "pi_points": 7,
+   "rho_fibre": "4*y**3/125 + 24*y**2/25 - 1",
+   "rho_values": 6,
+   "rho_points": 6,
+   "punctures": 3,
+   "ranks": [
+    3,
+    3,
+    3
+   ],
+   "transverse": true
+  },
+  "pi_values": [
+   [
+    -3.1848934329119816,
+    -1.1038062087226432
+   ],
+   [
+    -0.4385259198497835,
+    -0.3557944375614222
+   ],
+   [
+    0.4385259198497835,
+    -0.3557944375614222
+   ],
+   [
+    3.1848934329119816,
+    -1.1038062087226432
+   ],
+   [
+    2.351174588983406,
+    1.473182420435484
+   ],
+   [
+    0.0,
+    1.8775983564590677
+   ],
+   [
+    -2.351174588983406,
+    1.473182420435484
+   ]
+  ],
+  "rho_values": [
+   [
+    -3.3113925979080037,
+    -0.5414979098195609
+   ],
+   [
+    -2.4842039136179,
+    -0.7172207770177614
+   ],
+   [
+    2.4842039136179,
+    -0.7172207770177614
+   ],
+   [
+    3.3113925979080037,
+    -0.5414979098195609
+   ],
+   [
+    1.0238386525402976,
+    0.09772095441101847
+   ],
+   [
+    -1.0238386525402976,
+    0.09772095441101847
+   ]
+  ],
+  "matching": [
+   {
+    "path": "vanishing 0",
+    "closed": false,
+    "result": [
+     4,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 1",
+    "closed": false,
+    "result": [
+     1,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 2",
+    "closed": false,
+    "result": [
+     2,
+     4
+    ]
+   },
+   {
+    "path": "vanishing 3",
+    "closed": false,
+    "result": [
+     4,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 4",
+    "closed": false,
+    "result": [
+     2,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 5",
+    "closed": false,
+    "result": [
+     0,
+     3
+    ]
+   },
+   {
+    "path": "vanishing 6",
+    "closed": false,
+    "result": [
+     1,
+     4
+    ]
+   }
+  ],
+  "vanishing": [
+   {
+    "path": "vanishing 0",
+    "closed": false,
+    "result": [
+     0,
+     1
+    ]
+   },
+   {
+    "path": "vanishing 1",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 2",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 3",
+    "closed": false,
+    "result": [
+     0,
+     1
+    ]
+   },
+   {
+    "path": "vanishing 4",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 5",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   },
+   {
+    "path": "matching 0-2",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   }
+  ]
+ },
+ "p3d7": {
+  "summary": {
+   "domain": "x**2 + x*y*z + x + y**2 + y",
+   "smooth": true,
+   "fibre": "7*x**2*y/10 + x**2 - 3*I*x*y**2/10 + x + y**2 + y",
+   "pi_values": 6,
+   "pi_points": 6,
+   "rho_fibre": "53*y**3/4000 + 399*y**2/400 + y + I*y/20",
+   "rho_values": 6,
+   "rho_points": 6,
+   "punctures": 3,
+   "ranks": [
+    3,
+    3,
+    3
+   ],
+   "transverse": true
+  },
+  "pi_values": [
+   [
+    0.4849048065306153,
+    -0.3847813663985936
+   ],
+   [
+    1.1943168732026,
+    -0.3308428326108926
+   ],
+   [
+    2.9001450757847467,
+    -0.7304267719278807
+   ],
+   [
+    2.4190806119921593,
+    0.8386290072948699
+   ],
+   [
+    0.10147508872818126,
+    1.6449965485103468
+   ],
+   [
+    -4.399922456238302,
+    0.567187319894055
+   ]
+  ],
+  "rho_values": [
+   [
+    -1.3790531801799115,
+    -1.5648624521407122
+   ],
+   [
+    -1.972299322620445,
+    -2.630217532405008
+   ],
+   [
+    2.019199066204955,
+    -2.6443172534681567
+   ],
+   [
+    2.489942214939185,
+    -1.2965368768152252
+   ],
+   [
+    0.21477930954116023,
+    0.039037982428055305
+   ],
+   [
+    -1.3725680878849438,
+    0.6796625723103443
+   ]
+  ],
+  "matching": [
+   {
+    "path": "vanishing 0",
+    "closed": false,
+    "result": [
+     0,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 1",
+    "closed": false,
+    "result": [
+     3,
+     4
+    ]
+   },
+   {
+    "path": "vanishing 2",
+    "closed": false,
+    "result": [
+     4,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 3",
+    "closed": false,
+    "result": [
+     3,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 4",
+    "closed": false,
+    "result": [
+     0,
+     3
+    ]
+   },
+   {
+    "path": "vanishing 5",
+    "closed": false,
+    "result": [
+     0,
+     5
+    ]
+   },
+   {
+    "path": "to pi-crit 4, left",
+    "closed": false,
+    "result": [
+     1,
+     3
+    ]
+   },
+   {
+    "path": "to pi-crit 4, right",
+    "closed": false,
+    "result": [
+     0,
+     3
+    ]
+   }
+  ],
+  "vanishing": [
+   {
+    "path": "vanishing 0",
+    "closed": false,
+    "result": [
+     0,
+     1
+    ]
+   },
+   {
+    "path": "vanishing 1",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 2",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 3",
+    "closed": false,
+    "result": [
+     0,
+     1
+    ]
+   },
+   {
+    "path": "vanishing 4",
+    "closed": false,
+    "result": [
+     0,
+     1
+    ]
+   },
+   {
+    "path": "vanishing 5",
+    "closed": false,
+    "result": [
+     0,
+     1
+    ]
+   },
+   {
+    "path": "trivial circle",
+    "closed": true,
+    "result": [
+     0,
+     1,
+     2
+    ]
+   }
+  ]
+ },
+ "p3d8": {
+  "summary": {
+   "domain": "x**2 + x*y*z + y**2 - y",
+   "smooth": true,
+   "fibre": "2*I*x**2*y + x**2 + 2*I*x*y**2/5 + y**2 - y",
+   "pi_values": 5,
+   "pi_points": 5,
+   "rho_fibre": "I*y**3/40 + 17*y**2/16 - y",
+   "rho_values": 6,
+   "rho_points": 6,
+   "punctures": 3,
+   "ranks": [
+    3,
+    3,
+    3
+   ],
+   "transverse": true
+  },
+  "pi_values": [
+   [
+    -0.2088504110367262,
+    -1.810841840598831
+   ],
+   [
+    4.189747015641263,
+    -2.175593612729949
+   ],
+   [
+    -0.18918411315652284,
+    2.208912951903368
+   ],
+   [
+    -3.7932023354228703,
+    1.7610062533277586
+   ],
+   [
+    -5.198510156025144,
+    0.41651624809765364
+   ]
+  ],
+  "rho_values": [
+   [
+    -0.04432101937401818,
+    -2.6684838712032795
+   ],
+   [
+    0.04817057176956394,
+    -0.4335656449961119
+   ],
+   [
+    0.11843600740052436,
+    -0.41351215929170476
+   ],
+   [
+    0.19174245827013744,
+    -0.07116223882381588
+   ],
+   [
+    -0.18387001080884627,
+    0.4879343866300113
+   ],
+   [
+    -0.13015800725736132,
+    0.03878952768490058
+   ]
+  ],
+  "matching": [
+   {
+    "path": "vanishing 0",
+    "closed": false,
+    "result": [
+     2,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 1",
+    "closed": false,
+    "result": [
+     3,
+     4
+    ]
+   },
+   {
+    "path": "vanishing 2",
+    "closed": false,
+    "result": [
+     3,
+     4
+    ]
+   },
+   {
+    "path": "vanishing 3",
+    "closed": false,
+    "result": [
+     2,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 4",
+    "closed": false,
+    "result": [
+     0,
+     3
+    ]
+   }
+  ],
+  "vanishing": [
+   {
+    "path": "vanishing 0",
+    "closed": false,
+    "result": [
+     0,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 1",
+    "closed": false,
+    "result": [
+     0,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 2",
+    "closed": false,
+    "result": [
+     0,
+     1
+    ]
+   },
+   {
+    "path": "vanishing 3",
+    "closed": false,
+    "result": [
+     0,
+     1
+    ]
+   },
+   {
+    "path": "vanishing 4",
+    "closed": false,
+    "result": [
+     0,
+     1
+    ]
+   },
+   {
+    "path": "vanishing 5",
+    "closed": false,
+    "result": [
+     0,
+     1
+    ]
+   },
+   {
+    "path": "monodromy hexagon",
+    "closed": true,
+    "result": [
+     0,
+     1,
+     2
+    ]
+   },
+   {
+    "path": "trivial circle",
+    "closed": true,
+    "result": [
+     0,
+     1,
+     2
+    ]
+   },
+   {
+    "path": "upper circuit",
+    "closed": true,
+    "result": [
+     0,
+     2,
+     1
+    ]
+   },
+   {
+    "path": "lower circuit",
+    "closed": true,
+    "result": [
+     2,
+     0,
+     1
+    ]
+   }
+  ]
+ },
+ "p4": {
+  "summary": {
+   "domain": "x**2 + x*y*z - y/4 - z/4 + 3/16",
+   "smooth": true,
+   "fibre": "6*x**2*z + x**2 + 4*x*z**2/3 - 3*x/2 - 7*z/12 + 3/16",
+   "pi_values": 7,
+   "pi_points": 7,
+   "rho_fibre": "54*x**3 + x**2 - 33*x/8 + 3/16",
+   "rho_values": 6,
+   "rho_points": 6,
+   "punctures": 3,
+   "ranks": [
+    3,
+    3,
+    3
+   ],
+   "transverse": true
+  },
+  "pi_values": [
+   [
+    -1.2978898986166139,
+    -1.673058528146799
+   ],
+   [
+    -0.6258489055658426,
+    -1.3085833494964279
+   ],
+   [
+    1.7015462515093212,
+    -0.8221749532553015
+   ],
+   [
+    0.4582739942351594,
+    0.0
+   ],
+   [
+    1.7015462515093212,
+    0.8221749532553015
+   ],
+   [
+    -0.6258489055658426,
+    1.3085833494964279
+   ],
+   [
+    -1.2978898986166139,
+    1.673058528146799
+   ]
+  ],
+  "rho_values": [
+   [
+    -0.9568858952544299,
+    -1.2600171330094032
+   ],
+   [
+    -0.20870670350053303,
+    -3.5477910019746073
+   ],
+   [
+    0.6655925987549629,
+    -2.3060824401458135
+   ],
+   [
+    0.6655925987549629,
+    2.3060824401458135
+   ],
+   [
+    -0.20870670350053303,
+    3.5477910019746073
+   ],
+   [
+    -0.9568858952544299,
+    1.2600171330094032
+   ]
+  ],
+  "matching": [
+   {
+    "path": "vanishing 0",
+    "closed": false,
+    "result": [
+     2,
+     4
+    ]
+   },
+   {
+    "path": "vanishing 1",
+    "closed": false,
+    "result": [
+     3,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 2",
+    "closed": false,
+    "result": [
+     0,
+     4
+    ]
+   },
+   {
+    "path": "vanishing 3",
+    "closed": false,
+    "result": [
+     0,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 4",
+    "closed": false,
+    "result": [
+     1,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 5",
+    "closed": false,
+    "result": [
+     0,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 6",
+    "closed": false,
+    "result": [
+     1,
+     3
+    ]
+   }
+  ],
+  "vanishing": [
+   {
+    "path": "vanishing 0",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 1",
+    "closed": false,
+    "result": [
+     0,
+     1
+    ]
+   },
+   {
+    "path": "vanishing 2",
+    "closed": false,
+    "result": [
+     0,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 3",
+    "closed": false,
+    "result": [
+     0,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 4",
+    "closed": false,
+    "result": [
+     0,
+     1
+    ]
+   },
+   {
+    "path": "vanishing 5",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   }
+  ]
+ },
+ "p5": {
+  "summary": {
+   "domain": "x**2 + x*y*z + y**2 - z + 3",
+   "smooth": true,
+   "fibre": "3*x**2*z + 10*x**2 - 2*x*z**2 - 12*x*z + 4*z**2 - z + 3",
+   "pi_values": 8,
+   "pi_points": 8,
+   "rho_fibre": "39*z**3/4 + 89*z**2/2 - z + 3",
+   "rho_values": 6,
+   "rho_points": 6,
+   "punctures": 3,
+   "ranks": [
+    3,
+    3,
+    3
+   ],
+   "transverse": true
+  },
+  "pi_values": [
+   [
+    -7.346567777913393,
+    -1.245209761335123
+   ],
+   [
+    -1.709418676536773,
+    -6.881702591953988
+   ],
+   [
+    1.4358102060946367,
+    -7.099050786891346
+   ],
+   [
+    7.953509581688862,
+    -0.8288025881925952
+   ],
+   [
+    7.953509581688862,
+    0.8288025881925952
+   ],
+   [
+    1.4358102060946367,
+    7.099050786891346
+   ],
+   [
+    -1.709418676536773,
+    6.881702591953988
+   ],
+   [
+    -7.346567777913393,
+    1.245209761335123
+   ]
+  ],
+  "rho_values": [
+   [
+    -6.773881622439375,
+    0.0
+   ],
+   [
+    -2.837091798032978,
+    -6.166399768833989
+   ],
+   [
+    0.4015359272266207,
+    -4.523321877476788
+   ],
+   [
+    4.756104475163201,
+    0.0
+   ],
+   [
+    0.4015359272266207,
+    4.523321877476788
+   ],
+   [
+    -2.837091798032978,
+    6.166399768833989
+   ]
+  ],
+  "matching": [
+   {
+    "path": "vanishing 0",
+    "closed": false,
+    "result": [
+     2,
+     3
+    ]
+   },
+   {
+    "path": "vanishing 1",
+    "closed": false,
+    "result": [
+     2,
+     3
+    ]
+   },
+   {
+    "path": "vanishing 2",
+    "closed": false,
+    "result": [
+     0,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 3",
+    "closed": false,
+    "result": [
+     2,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 4",
+    "closed": false,
+    "result": [
+     1,
+     4
+    ]
+   },
+   {
+    "path": "vanishing 5",
+    "closed": false,
+    "result": [
+     0,
+     4
+    ]
+   },
+   {
+    "path": "vanishing 6",
+    "closed": false,
+    "result": [
+     3,
+     4
+    ]
+   },
+   {
+    "path": "vanishing 7",
+    "closed": false,
+    "result": [
+     3,
+     4
+    ]
+   }
+  ],
+  "vanishing": [
+   {
+    "path": "vanishing 0",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 1",
+    "closed": false,
+    "result": [
+     0,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 2",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 3",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 4",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 5",
+    "closed": false,
+    "result": [
+     0,
+     1
+    ]
+   },
+   {
+    "path": "matching 0-2",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   }
+  ]
+ },
+ "p6": {
+  "summary": {
+   "domain": "x**2 + x*y*z + y**2 + z**2 - 3",
+   "smooth": true,
+   "fibre": "x**2*y/2 + 5*x**2/4 - 5*I*x*y**2/2 - 5*I*x*y/2 - 21*y**2/4 - 3",
+   "pi_values": 9,
+   "pi_points": 9,
+   "rho_fibre": "25*y**3/162 + 25*I*y**3/18 - 3769*y**2/81 + 575*I*y**2/54 - 1625*y/9 + 625*I*y/27 - 3152/9",
+   "rho_values": 6,
+   "rho_points": 6,
+   "punctures": 3,
+   "ranks": [
+    3,
+    3,
+    3
+   ],
+   "transverse": true
+  },
+  "pi_values": [
+   [
+    -0.8793079445521436,
+    -1.2308318740127173
+   ],
+   [
+    -0.29094237391371436,
+    -0.703500619568321
+   ],
+   [
+    0.29094237391371436,
+    -0.703500619568321
+   ],
+   [
+    0.8793079445521436,
+    -1.2308318740127173
+   ],
+   [
+    0.31309592906312717,
+    1.1730713507921569
+   ],
+   [
+    0.057534075937709796,
+    0.7684607551677165
+   ],
+   [
+    0.0,
+    1.19560077524233
+   ],
+   [
+    -0.057534075937709796,
+    0.7684607551677165
+   ],
+   [
+    -0.31309592906312717,
+    1.1730713507921569
+   ]
+  ],
+  "rho_values": [
+   [
+    -2.2354194701448185,
+    -37.807194880990885
+   ],
+   [
+    1.4753436213637094,
+    -0.1397124706200744
+   ],
+   [
+    1.3252113220570254,
+    2.176209072267986
+   ],
+   [
+    0.35955873439025116,
+    0.32792040067363054
+   ],
+   [
+    -1.5991314522093263,
+    0.17744042024510318
+   ],
+   [
+    -1.9855627554568411,
+    3.0453374584242385
+   ]
+  ],
+  "matching": [
+   {
+    "path": "vanishing 0",
+    "closed": false,
+    "result": [
+     2,
+     4
+    ]
+   },
+   {
+    "path": "vanishing 1",
+    "closed": false,
+    "result": [
+     2,
+     4
+    ]
+   },
+   {
+    "path": "vanishing 2",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 3",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 4",
+    "closed": false,
+    "result": [
+     3,
+     4
+    ]
+   },
+   {
+    "path": "vanishing 5",
+    "closed": false,
+    "result": [
+     4,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 6",
+    "closed": false,
+    "result": [
+     0,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 7",
+    "closed": false,
+    "result": [
+     1,
+     5
+    ]
+   },
+   {
+    "path": "vanishing 8",
+    "closed": false,
+    "result": [
+     1,
+     5
+    ]
+   }
+  ],
+  "vanishing": [
+   {
+    "path": "vanishing 0",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 1",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 2",
+    "closed": false,
+    "result": [
+     0,
+     1
+    ]
+   },
+   {
+    "path": "vanishing 3",
+    "closed": false,
+    "result": [
+     0,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 4",
+    "closed": false,
+    "result": [
+     1,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 5",
+    "closed": false,
+    "result": [
+     0,
+     2
+    ]
+   },
+   {
+    "path": "trivial circle",
+    "closed": true,
+    "result": [
+     0,
+     1,
+     2
+    ]
+   },
+   {
+    "path": "vanishing 2",
+    "closed": false,
+    "result": [
+     0,
+     1
+    ]
+   },
+   {
+    "path": "vanishing 5",
+    "closed": false,
+    "result": [
+     0,
+     2
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,271 @@
+<!doctype html><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lefschetz bifibrations</title>
+<script src="plotly.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[["$","$"]],displayMath:[["$$","$$"]]},svg:{fontCache:"global"},startup:{typeset:false,pageReady:()=>MathJax.startup.defaultPageReady().then(()=>window.flushTex&&window.flushTex())}};</script>
+<script id="MathJax-script" async src="tex-svg.js"></script>
+<style>
+:root{--fg:#1a1a1a;--muted:#6a6a6a;--line:#e3e3e3;--bg:#fff;--panel:#fafafa;
+      --accent:#1f77b4;--bad:#c0392b;--good:#2ca02c}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+     font:15px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+main{max-width:1080px;margin:0 auto;padding:1.5rem 1.25rem 6rem}
+h1{font-size:1.5rem;margin:0 0 .2rem}
+h2{font-size:1.05rem;margin:2rem 0 .6rem;padding-bottom:.3rem;
+   border-bottom:1px solid var(--line)}
+p.sub{color:var(--muted);margin:0 0 1.5rem;font-size:.92rem}
+fieldset{border:1px solid var(--line);border-radius:8px;background:var(--panel);
+         padding:1rem 1.1rem;margin:0 0 1rem}
+legend{padding:0 .4rem;color:var(--muted);font-size:.85rem;font-weight:600;
+       letter-spacing:.02em}
+.row{display:grid;grid-template-columns:minmax(120px,auto) 1fr;gap:.55rem .9rem;
+     align-items:center}
+label{color:var(--muted);font-size:.9rem}
+input{width:100%;padding:.4rem .55rem;border:1px solid #ccc;border-radius:5px;
+      font:13.5px ui-monospace,SFMono-Regular,Menlo,monospace;background:#fff;color:var(--fg)}
+input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+button{margin-top:.9rem;padding:.5rem 1.1rem;border:0;border-radius:6px;
+       background:var(--accent);color:#fff;font-size:.92rem;font-weight:600;cursor:pointer}
+button:disabled{background:#9bb8cf;cursor:default}
+.hint{color:var(--muted);font-size:.82rem;margin:.5rem 0 0}
+.facts{display:flex;flex-wrap:wrap;gap:.4rem .5rem;margin:.9rem 0}
+.chip{border:1px solid var(--line);border-radius:999px;padding:.15rem .7rem;
+      font-size:.85rem;background:#fff}
+.chip b{font-weight:600}
+.chip.warn{border-color:var(--bad);color:var(--bad)}
+.eq{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86rem;
+    color:#333;background:#fff;border:1px solid var(--line);border-radius:6px;
+    padding:.5rem .7rem;margin:.5rem 0;overflow-x:auto;white-space:pre}
+.err{border-left:3px solid var(--bad);background:#fdf3f2;padding:.6rem .9rem;
+     color:#7d2820;font-size:.9rem;margin:.8rem 0;white-space:pre-wrap}
+.fig{margin:.5rem 0 1.3rem}
+.cap{color:var(--muted);font-size:.85rem;margin:.1rem 0 0}
+.hidden{display:none}
+button.add{margin:.15rem 0 0;padding:.22rem .6rem;background:#fff;color:var(--accent);
+  border:1px solid #bcd4e6;font-size:.82rem;font-weight:600}
+button.del{margin:0;padding:.1rem .45rem;background:#fff;color:var(--muted);
+  border:1px solid #ddd;font-size:.9rem;line-height:1.1}
+.prow{display:flex;gap:.4rem;margin-bottom:.35rem;align-items:center}
+.prow input.k{flex:0 0 7rem}
+.prow input.v{flex:1}
+.tex{background:#fff;border:1px solid var(--line);border-radius:6px;
+     padding:.7rem .9rem;margin:.6rem 0;overflow-x:auto}
+.busy{color:var(--muted);font-size:.9rem;margin:.6rem 0}
+</style>
+<main>
+<h1>Lefschetz bifibrations</h1>
+<p class="sub">Enter a surface and a fibration &pi;; then a fibration &rho; on its
+fibres. Every plot pans and zooms.</p>
+
+<form id="fpi">
+<fieldset><legend>Surface and &pi;</legend>
+  <div class="row">
+    <label for="domain">Surface X</label><input id="domain" spellcheck="false">
+    <label>Parameters</label>
+    <div><div id="params"></div>
+      <button type="button" class="add" id="addparam">+ parameter</button></div>
+    <label for="pi">&pi;</label><input id="pi" spellcheck="false">
+    <label for="pisolve">eliminate</label><input id="pisolve" spellcheck="false" placeholder="z">
+    <label for="piorigin">origin of &pi;</label><input id="piorigin" spellcheck="false" placeholder="0">
+  </div>
+  <button type="submit" id="bpi">Compute &pi;</button>
+  <p class="hint">Write powers as <code>**</code>, the imaginary unit as <code>I</code>.
+     Decimals are read exactly: <code>0.3</code> means 3/10.</p>
+</fieldset>
+</form>
+<div id="pibusy" class="busy hidden">computing&hellip;</div>
+<div id="piout"></div>
+
+<form id="frho" class="hidden">
+<fieldset><legend>&rho;</legend>
+  <div class="row">
+    <label for="rho">&rho;</label><input id="rho" spellcheck="false">
+    <label for="rhosolve">eliminate</label><input id="rhosolve" spellcheck="false">
+    <label for="rhoorigin">origin of &rho;</label><input id="rhoorigin" spellcheck="false" placeholder="0">
+  </div>
+  <button type="submit" id="brho">Compute &rho;</button>
+  <p class="hint" id="rhohint"></p>
+</fieldset>
+</form>
+<div id="rhobusy" class="busy hidden">computing&hellip;</div>
+<div id="rhoout"></div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+function addParam(key, value){
+  const row = document.createElement('div'); row.className = 'prow';
+  const k = document.createElement('input'); k.className = 'k';
+  k.placeholder = 'name'; k.spellcheck = false; k.value = key || '';
+  const v = document.createElement('input'); v.className = 'v';
+  v.placeholder = 'value, e.g. -2 or I'; v.spellcheck = false; v.value = value || '';
+  const del = document.createElement('button');
+  del.type = 'button'; del.className = 'del'; del.textContent = '\u00d7';
+  del.title = 'remove'; del.onclick = () => { row.remove(); touched(); };
+  for (const el of [k, v]) el.addEventListener('input', touched);
+  row.append(k, v, del);
+  $('params').appendChild(row);
+  return row;
+}
+
+function readParams(){
+  const out = {};
+  for (const row of $('params').querySelectorAll('.prow')){
+    const k = row.querySelector('.k').value.trim();
+    const v = row.querySelector('.v').value.trim();
+    if (k) out[k] = v;
+  }
+  return out;
+}
+
+function spec(withRho){
+  const s = {
+    domain: $('domain').value.trim(),
+    params: readParams(),
+    pi: {expression: $('pi').value.trim(),
+         solvefor: $('pisolve').value.trim() || undefined,
+         origin: $('piorigin').value.trim() || 0},
+  };
+  if (withRho) s.rho = {expression: $('rho').value.trim(),
+                        solvefor: $('rhosolve').value.trim() || undefined,
+                        origin: $('rhoorigin').value.trim() || 0};
+  return s;
+}
+
+let usePreset = false;   // true only for the automatic first run
+function touched(){ usePreset = false; }
+
+async function post(body){
+  if (usePreset) body.preset = true;
+  const r = await fetch('/api/compute', {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+  return r.json();
+}
+
+function plot(host, figure, caption){
+  const wrap = document.createElement('div'); wrap.className = 'fig';
+  const div = document.createElement('div'); wrap.appendChild(div);
+  if (caption){ const p = document.createElement('p');
+    p.className='cap'; p.textContent = caption; wrap.appendChild(p); }
+  host.appendChild(wrap);
+  Plotly.newPlot(div, figure.data, figure.layout,
+                 {displaylogo:false, responsive:true});
+}
+
+// MathJax is loaded async, so a block can be written before it exists.
+// Queue such blocks and typeset them once it is ready.
+const pendingTex = [];
+function typeset(host){ pendingTex.push(host); flushTex(); }
+function flushTex(){
+  if (!(window.MathJax && MathJax.typesetPromise)) return;
+  const waiting = pendingTex.splice(0);
+  if (waiting.length) MathJax.typesetPromise(waiting).catch(e => console.error(e));
+}
+window.flushTex = flushTex;
+
+function chips(items){
+  return '<div class="facts">' + items.map(([k,v,bad]) =>
+    `<span class="chip${bad?' warn':''}">${esc(k)} <b>${esc(v)}</b></span>`).join('') + '</div>';
+}
+
+function showError(host, msg){
+  host.innerHTML = `<div class="err">${esc(msg)}</div>`;
+}
+
+function renderPi(r){
+  const host = $('piout');
+  if (r.pi && r.pi.error) { showError(host, r.pi.error); return false; }
+  const p = r.pi;
+  host.innerHTML =
+    chips([['critical values', p.n_values],
+           ['critical points', p.n_points, p.n_points !== p.n_values],
+           ['punctures', p.punctures],
+           ['ranks at infinity', '[' + p.ranks.join(', ') + ']'],
+           ['smooth', r.smooth === null ? '?' : (r.smooth ? 'yes' : 'no'), r.smooth === false]])
+    + `<div class="tex">$$${p.tex}$$</div>`;
+  typeset(host);
+  plot(host, p.figure, 'Critical values of pi, with the reference fibre in green.');
+  $('frho').classList.remove('hidden');
+  $('rhohint').textContent =
+    'A linear form in the variables other than ' + ($('pisolve').value.trim() || 'the eliminated one') + '.';
+  return true;
+}
+
+function renderRho(r){
+  const host = $('rhoout');
+  if (r.pi && r.pi.error) { showError(host, r.pi.error); return; }
+  if (r.rho && r.rho.error) { showError(host, r.rho.error); return; }
+  const q = r.rho;
+  host.innerHTML = '<h2>Critical values of &rho;</h2>'
+    + chips([['critical values', q.n_values],
+             ['critical points', q.n_points, q.n_points !== q.n_values]])
+    + `<div class="tex">$$${q.tex}$$</div>`;
+  typeset(host);
+  plot(host, q.critical_figure, 'Critical values of rho, with the reference fibre in green.');
+
+  let h = document.createElement('h2'); h.textContent = 'Generic fibre of \u03c1';
+  host.appendChild(h);
+  plot(host, q.fibre_figure,
+       'The points of the reference fibre. These are what collide below.');
+
+  h = document.createElement('h2'); h.textContent = 'Vanishing cycles of \u03c1';
+  host.appendChild(h);
+  for (const v of q.vanishing) plot(host, v.figure, v.name + ' \u2014 ' + v.result);
+
+  h = document.createElement('h2'); h.textContent = 'Matching paths induced by \u03c0';
+  host.appendChild(h);
+  for (const m of q.matching) plot(host, m.figure, m.name + ' \u2014 ' + m.result);
+}
+
+$('fpi').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  $('bpi').disabled = true; $('pibusy').classList.remove('hidden');
+  $('piout').innerHTML = ''; $('rhoout').innerHTML = '';
+  try {
+    renderPi(await post(spec(false)));
+  } catch (e) { showError($('piout'), e.message); }
+  finally { $('bpi').disabled = false; $('pibusy').classList.add('hidden'); }
+});
+
+$('frho').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  $('brho').disabled = true; $('rhobusy').classList.remove('hidden');
+  $('rhoout').innerHTML = '';
+  try {
+    renderRho(await post(spec(true)));
+  } catch (e) { showError($('rhoout'), e.message); }
+  finally { $('brho').disabled = false; $('rhobusy').classList.add('hidden'); }
+});
+
+$('addparam').addEventListener('click', () => { addParam(); touched(); });
+
+// Pre-fill from an example file. The server substitutes the preset into the
+// placeholder below, so there is nothing to wait for.
+const PRESET = /*PRESET*/null;
+(function(p){
+  if (!p || !p.domain) return;
+  $('domain').value = p.domain || '';
+  for (const [k, v] of Object.entries(p.params_dict || {})) addParam(k, v);
+  $('pi').value = p.pi || '';
+  $('pisolve').value = p.pisolve || '';
+  $('piorigin').value = p.piorigin || '0';
+  $('rho').value = p.rho || '';
+  $('rhosolve').value = p.rhosolve || '';
+  $('rhoorigin').value = p.rhoorigin || '0';
+  if (p.auto){
+    usePreset = true;
+    if (p.result){          // computed before the browser opened
+      if (renderPi(p.result) && p.result.rho) renderRho(p.result);
+    } else {
+      $('fpi').requestSubmit();
+      if (p.rho) setTimeout(() => $('frho').requestSubmit(), 50);
+    }
+  }
+  // Any edit means the file's own paths no longer apply.
+  for (const id of ['domain','pi','pisolve','piorigin','rho','rhosolve','rhoorigin'])
+    $(id).addEventListener('input', touched);
+})(PRESET);
+</script>

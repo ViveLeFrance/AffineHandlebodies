@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "affine-handlebodies"
+version = "0.2.0"
+description = "Weinstein handlebodies of smooth complex affine surfaces via Lefschetz bifibrations"
+requires-python = ">=3.10"
+dependencies = ["sympy>=1.12", "numpy>=1.24", "plotly>=5.18"]
+
+[tool.setuptools]
+packages = ["handlebodies", "examples"]
+
+[tool.setuptools.package-data]
+handlebodies = ["page.html", "tex-svg.js.gz"]
