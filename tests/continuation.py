@@ -50,19 +50,24 @@ def compare(name, tol=TOLERANCE):
 
     for label, fn in study.pi_paths():
         path = np.asarray(fn(study.cv))
-        exact = study.bifibration.matching_path(refine(path))
+        _, exact = study.bifibration.matching_path(refine(path))
         try:
             # verify=True so the last frame really is the endpoint; with it
             # off the tracker deliberately stops a hair short, and the ends
             # would differ for that reason rather than from any error.
-            tracked = study.bifibration.matching_path(path, numeric=True,
-                                                      verify=True)
+            _, tracked = study.bifibration.matching_path(path, numeric=True,
+                                                         verify=True)
         except Exception as exc:
             problems.append(f'{name}/{label}: tracking failed: '
                             f'{type(exc).__name__}: {exc}')
             continue
 
         checked += 1
+        if tracked is None or exact is None:
+            problems.append(f'{name}/{label}: values could not be sorted into '
+                            f'branches by '
+                            + ('the tracker' if tracked is None else 'the exact route'))
+            continue
         if tracked.shape[1] != exact.shape[1]:
             problems.append(f'{name}/{label}: {tracked.shape[1]} branches '
                             f'vs {exact.shape[1]}')

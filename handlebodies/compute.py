@@ -5,6 +5,8 @@ whatever can be computed from it, so there is no session to keep in step.
 The pi half is computed alone when rho has not been filled in yet.
 """
 
+import json
+
 import sympy as sp
 
 from .study import Study, _slug
@@ -18,6 +20,31 @@ def _err(stage, exc):
     return {'stage': stage, 'error': f'{type(exc).__name__}: {exc}'}
 
 
+#: the few most recent studies, so pressing a second button does not redo the
+#: first one's work.  A Study caches what it computes, and pi's critical values
+#: alone can take the best part of a minute on a high-degree surface.
+_RECENT = {}
+_RECENT_LIMIT = 4
+
+
+def study_for(spec, paths=None):
+    """The Study for this specification, reused if it has been built before."""
+    pi_paths, rho_paths = paths or ((), ())
+    key = json.dumps({'domain': spec['domain'],
+                      'params': spec.get('params') or None,
+                      'pi': spec['pi'], 'rho': spec.get('rho'),
+                      'declared': bool(pi_paths or rho_paths)}, sort_keys=True)
+    if key not in _RECENT:
+        if len(_RECENT) >= _RECENT_LIMIT:
+            _RECENT.pop(next(iter(_RECENT)))
+        _RECENT[key] = Study(
+            name=spec.get('name', 'surface'),
+            domain=spec['domain'], params=spec.get('params') or None,
+            pi=spec['pi'], rho=spec.get('rho') or dict(expression='0'),
+            pi_paths=pi_paths, rho_paths=rho_paths)
+    return _RECENT[key]
+
+
 def surface_and_pi(spec, paths=None):
     """Everything that depends only on the surface and pi.
 
@@ -26,11 +53,7 @@ def surface_and_pi(spec, paths=None):
     falls back to the straight-line defaults.
     """
     from . import web as R
-    pi_paths, rho_paths = paths or ((), ())
-    study = Study(name=spec.get('name', 'surface'),
-                  domain=spec['domain'], params=spec.get('params') or None,
-                  pi=spec['pi'], rho=spec.get('rho') or dict(expression='0'),
-                  pi_paths=pi_paths, rho_paths=rho_paths)
+    study = study_for(spec, paths)
     pi = study.pi
     cv = pi.critical_values()
     ranks = pi.transversality()
@@ -52,7 +75,7 @@ def surface_and_pi(spec, paths=None):
     }
 
 
-def rho_section(study, numeric=False, verify=False):
+def rho_section(study):
     """Everything that needs rho: its critical values, its fibre, the traces.
 
     `numeric` switches the matching paths to the path tracker.  It is the whole
@@ -83,6 +106,8 @@ def rho_section(study, numeric=False, verify=False):
     }
 
     def described(m):
+        if m.get('branches') is None:
+            return m.get('note', 'shown as computed')
         if m['closed']:
             return f"monodromy {m['monodromy']}"
         i, j, gap = m['collision']
@@ -99,21 +124,63 @@ def rho_section(study, numeric=False, verify=False):
     } for i, m in enumerate(study.vanishing_cycles())]
 
     n_pi = len(study.cv.pi)
-    out['matching'] = [{
-        'name': m['name'], 'key': _slug(m['name']),
-        'target': i if i < n_pi else None,
-        'result': (m['error'] if m.get('error')
-                   else described(m).replace('points', 'branches')),
-        'failed': bool(m.get('error')),
-        'closed': m['closed'],
-        'figure': None if m.get('error') else _fig(R.trace3d(
-            m['branches'],
-            title=f"pi: {m['name']} -- {described(m).replace('points','branches')}",
-            highlight=None if m['closed'] else m['collision'][:2],
-            origin=rho.origin_c)),
-    } for i, m in enumerate(study.matching_paths(numeric=numeric,
-                                                 verify=verify))]
     return out
+
+
+def matching_section(study, numeric=False, verify=False):
+    """The matching paths alone.
+
+    Split out from the rest because it is much the most expensive part: rho's
+    own critical values, fibre and vanishing cycles are quick, and it should be
+    possible to settle on a rho before paying for these.
+    """
+    from . import web as R
+    n_pi = len(study.cv.pi)
+
+    def described(m):
+        if m.get('note'):
+            return m['note']
+        if m.get('branches') is None:
+            return 'shown as computed'
+        if m['closed']:
+            return f"monodromy {m['monodromy']}"
+        i, j, gap = m['collision']
+        return f"points {i} and {j} collide (gap {gap:.1e})"
+
+    return [_traced(m, i, n_pi, R.trace3d, study.rho.origin_c, described)
+            for i, m in enumerate(
+                study.matching_paths(numeric=numeric, verify=verify))]
+
+
+def _traced(m, i, n_default, render, origin, described):
+    """One traced path, as the page needs it.
+
+    Three outcomes, and only the first is a failure: the values could not be
+    computed at all; they were computed but not sortable into branches, in
+    which case they are still drawn; or everything worked.
+    """
+    row = {'name': m['name'], 'key': _slug(m['name']),
+           'target': i if i < n_default else None,
+           'closed': m['closed'],
+           'failed': bool(m.get('error')),
+           'tracked': m.get('branches') is not None}
+    if m.get('error'):
+        row['result'] = m['error']
+        row['figure'] = None
+        return row
+    text = described(m).replace('points', 'branches')
+    row['result'] = text
+    title = f"pi: {m['name']} -- {text}"
+    zmax = m.get('partial') or 1.0
+    if m.get('branches') is None:
+        row['figure'] = _fig(render(m['frames'], title=title, loose=True,
+                                    origin=origin, zmax=zmax))
+    else:
+        row['figure'] = _fig(render(
+            m['branches'], title=title,
+            highlight=None if m['collision'] is None else m['collision'][:2],
+            origin=origin, zmax=zmax))
+    return row
 
 
 def compute(spec, paths=None):
@@ -139,11 +206,20 @@ def compute(spec, paths=None):
     if not spec.get('rho'):
         return result
     try:
-        result['rho'] = rho_section(study, bool(spec.get('numeric')),
-                                    bool(spec.get('verify')))
+        result['rho'] = rho_section(study)
     except Exception as exc:
         result['ok'] = False
         result['rho'] = _err('rho', exc)
+        return result
+
+    if not spec.get('matching'):
+        return result
+    try:
+        result['matching'] = matching_section(study, bool(spec.get('numeric')),
+                                              bool(spec.get('verify')))
+    except Exception as exc:
+        result['ok'] = False
+        result['matching'] = _err('matching', exc)
     return result
 
 
@@ -194,12 +270,24 @@ def retrace(spec, waypoints, steps=70, rounding=0.0, label='edited path',
                         steps=int(steps), rounding=rounding)
 
     if level == 'pi':
-        branches = study.bifibration.matching_path(path, numeric=numeric,
-                                                   verify=verify)
+        frames, branches = study.bifibration.matching_path(
+            path, numeric=numeric, verify=verify)
     else:
-        branches = study.rho.trace_fibre(path)
+        frames = branches = study.rho.trace_fibre(path)
 
     closed = is_closed(path)
+    if branches is None:
+        # The values are the result; sorting them into branches is not. Say so
+        # and draw them as they came out.
+        text = ('the values could not be followed as separate branches; '
+                'shown as computed')
+        figure = (R.trace3d(frames, title=f'{label} -- {text}', loose=True,
+                            origin=study.rho.origin_c) if level == 'pi'
+                  else R.trace(frames, title=f'{label} -- {text}', loose=True))
+        return {'ok': True, 'result': text, 'closed': closed, 'tracked': False,
+                'steps': len(path), 'figure': _fig(figure),
+                'path': [[float(p.real), float(p.imag)] for p in path]}
+
     m = {'name': label, 'closed': closed,
          'monodromy': monodromy(branches) if closed else None,
          'collision': None if closed else collision(branches)}
@@ -216,6 +304,7 @@ def retrace(spec, waypoints, steps=70, rounding=0.0, label='edited path',
         'ok': True,
         'result': text,
         'closed': closed,
+        'tracked': True,
         'steps': len(path),
         'figure': _fig(figure),
         'path': [[float(p.real), float(p.imag)] for p in path],

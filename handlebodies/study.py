@@ -125,7 +125,7 @@ class Study:
                 continue
             path = np.asarray(fn(self.cv))
             try:
-                branches = self.bifibration.matching_path(
+                frames, branches = self.bifibration.matching_path(
                     path, numeric=numeric, verify=verify)
             except Exception as exc:
                 # One path that cannot be followed must not take the rest with
@@ -133,12 +133,24 @@ class Study:
                 # critical value of pi is not a vanishing path at all, and on a
                 # surface with several real critical values that is a normal
                 # thing to meet; the others are still worth having.
-                out.append({'name': name, 'path': path, 'branches': None,
-                            'closed': False, 'monodromy': None,
-                            'collision': None,
+                out.append({'name': name, 'path': path, 'frames': None,
+                            'branches': None, 'closed': False,
+                            'monodromy': None, 'collision': None,
                             'error': f'{type(exc).__name__}: {exc}'})
                 continue
-            out.append(self._describe(name, path, branches))
+            described = self._describe(name, path, frames, branches)
+            report = self.bifibration._cache.get('tracking_report') or {}
+            if numeric and report.get('stopped'):
+                # Following stopped early. What was found still stands, but it
+                # covers only part of the path and nothing can be read off the
+                # end of it.
+                described['partial'] = report['covered_fraction']
+                described['collision'] = None
+                described['monodromy'] = None
+                described['note'] = (
+                    f"followed {report['covered_fraction']*100:.0f}% of the "
+                    f"path, then stopped: {report['stopped']}")
+            out.append(described)
         return out
 
     def vanishing_cycles(self, only=None):
@@ -152,8 +164,15 @@ class Study:
             if only is not None and not only(name):
                 continue
             path = np.asarray(fn(self.cv))
-            branches = self.rho.trace_fibre(path)
-            out.append(self._describe(name, path, branches))
+            try:
+                branches = self.rho.trace_fibre(path)
+            except Exception as exc:
+                out.append({'name': name, 'path': path, 'frames': None,
+                            'branches': None, 'closed': False,
+                            'monodromy': None, 'collision': None,
+                            'error': f'{type(exc).__name__}: {exc}'})
+                continue
+            out.append(self._describe(name, path, branches, branches))
         return out
 
     # -- rendering --------------------------------------------------------
@@ -168,18 +187,27 @@ class Study:
         return sort_by_angle(r, self.rho.origin_c)
 
     @staticmethod
-    def _describe(name, path, branches):
+    def _describe(name, path, frames, branches):
         """Report the permutation for a closed path, the collision otherwise.
 
         A closed path returns to where it started, so nothing collides: what it
         exhibits is the monodromy.  Only an open path running into a critical
-        value produces a colliding pair.
+        value produces a colliding pair.  Both readings need the values sorted
+        into branches; where that could not be done the values are still
+        returned, with nothing claimed about them.
         """
         closed = is_closed(path)
-        return {'name': name, 'path': path, 'branches': branches,
-                'closed': closed,
-                'monodromy': monodromy(branches) if closed else None,
-                'collision': None if closed else collision(branches)}
+        described = {'name': name, 'path': path, 'frames': frames,
+                     'branches': branches, 'closed': closed,
+                     'monodromy': None, 'collision': None}
+        if branches is None:
+            described['note'] = (
+                'the critical values could not be followed as separate '
+                'branches along this path, so they are shown as they are')
+            return described
+        described['monodromy'] = monodromy(branches) if closed else None
+        described['collision'] = None if closed else collision(branches)
+        return described
 
 
 def load(name, package='examples'):

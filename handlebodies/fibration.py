@@ -290,9 +290,10 @@ class Bifibration:
         seeds = self._cache.setdefault('seeds', {})
         key = repr(A.exact_point(path[0]))
         if key not in seeds:
-            seeds[key] = K.seed(self.pi.fibre(A.exact_point(path[0])),
-                                self.rho_vars, self.rho_coeffs)
-        start = seeds[key]
+            note = {}
+            seeds[key] = (K.seed(self.pi.fibre(A.exact_point(path[0])),
+                                 self.rho_vars, self.rho_coeffs, note), note)
+        start, seed_note = seeds[key]
 
         # Label the branches the way everything else is labelled, once; the
         # tracking then carries that labelling along by itself.
@@ -310,9 +311,23 @@ class Bifibration:
         # fastest as they converge, so reconciling the exact solve across that
         # last gap is itself a nearest-neighbour match over a large distance,
         # and it can pair the wrong ones -- the very error being avoided.
+        # path[:-1] then a point just short of the end: that is len(path)
+        # frames, of which the last stands in for the endpoint and is replaced
+        # below.  Appending rather than replacing it would return one frame
+        # more than the path has points, sliding the whole vertical axis.
         approach = path[-2] + (path[-1] - path[-2]) * (1.0 - endgame)
         points, report = K.track(system, start, path[:-1] + [approach])
         frames = [system.values(frame) for frame in points]
+        approached = frames[-1]
+        report.update(seed_note)
+        partial = report.get('stopped') is not None
+        self._cache['tracking_report'] = report
+        if partial:
+            # Stopped short. The frames are the critical values over the part
+            # of the path that could be followed; there is no endpoint to
+            # reconcile against, so hand back what there is.
+            report['covered_fraction'] = len(frames) / len(path)
+            return frames
 
         if verify:
             exact = self.critical_values_over(path[-1])
@@ -321,41 +336,59 @@ class Bifibration:
                     f'{len(frames[-1])} solutions were followed but the fibre '
                     f'over {path[-1]:.6g} has {len(exact)}')
             final, remaining = [], list(exact)
-            for value in frames[-1]:
+            for value in approached:
                 i = int(np.argmin(np.abs(np.array(remaining) - value)))
                 final.append(remaining.pop(i))
-            frames.append(np.array(final, complex))
-        else:
-            # Carry the tracked values the last fraction of a step. The point
-            # is a hair short of the endpoint, not at it, so the collision is
-            # reported a touch wider than it truly is -- which is the honest
-            # direction to err.
-            frames.append(frames[-1].copy())
+            frames[-1] = np.array(final, complex)
+        # Without verification the last frame stays where the tracking reached,
+        # a hair short of the endpoint, so the collision is reported a touch
+        # wider than it truly is -- the honest direction to err.
 
         report['verified'] = bool(verify)
-        report['endpoint_shift'] = float(np.abs(frames[-1] - frames[-2]).max())
+        report['endpoint_shift'] = float(np.abs(frames[-1] - approached).max())
         self._cache['tracking_report'] = report
         return frames
 
     def matching_path(self, path, numeric=False, verify=False):
-        """Critical values of rho traced along `path` in the base of pi.
+        """Critical values of rho over each point of `path` in the base of pi.
 
-        Returns an array of shape (len(path), n) whose columns are continuous
-        branches: entry [k, j] is branch j at path[k].  Two branches meeting at
-        the end of a vanishing path is the matching path of rho.
+        Returns (frames, branches).  `frames` is the real result: the critical
+        values of rho over each point of the path, one list per point.
+        `branches` is the same data sorted into continuous columns, entry
+        [k, j] being branch j at path[k] -- and it is None when that sorting
+        cannot be done.
+
+        Sorting the values into branches is a convenience for reading the
+        picture, not part of the computation, so it is never allowed to
+        suppress the values themselves.  It legitimately fails when the
+        fibre's critical values do not stay distinct along the path: they can
+        meet and separate and meet again if the path runs past several critical
+        values of pi, and there is then no continuous labelling to find.
         """
         if numeric:
-            # Continuation keeps each branch's identity, so there is nothing to
-            # re-match; matching frame by frame would in fact throw that away.
-            return np.asarray(self.tracked_frames(path, verify=verify))
+            # Continuation solves as it goes, so each frame it produced is a
+            # genuine set of critical values; where it stops, it stops, and
+            # what it found up to there still stands.  Re-solving the whole
+            # path another way because the last step failed would throw away
+            # everything already computed to buy something no better.
+            frames = self.tracked_frames(path, verify=verify)
+            return frames, np.asarray(frames)
         frames = self._frames(path)
         # Branch j starts at the j-th critical value of rho_0, so branch
         # indices agree with the labels on the critical-value plot.
-        return track(frames, first=self.rho_0.critical_values())
+        try:
+            branches = track(frames, first=self.rho_0.critical_values())
+        except Exception:
+            branches = None
+        return frames, branches
 
 
 def track(frames, first=None):
     """Match roots between consecutive steps into continuous branches.
+
+    Raises when the number of values changes along the path: there is then no
+    consistent set of branches to build, and the caller should fall back to the
+    values themselves.
 
     Greedy nearest-neighbour is enough here because the steps are small
     relative to the spacing of the roots away from a collision, and at a
@@ -368,6 +401,11 @@ def track(frames, first=None):
     """
     frames = [np.asarray(f) for f in frames]
     n = len(frames[0])
+    if any(len(f) != n for f in frames):
+        counts = sorted({len(f) for f in frames})
+        raise ValueError(
+            f'the number of critical values changes along the path {counts}, '
+            f'so they cannot be sorted into continuous branches')
     out = np.empty((len(frames), n), complex)
     if first is None:
         out[0] = np.sort_complex(frames[0])
@@ -377,10 +415,22 @@ def track(frames, first=None):
             i = int(np.argmin(np.abs(np.array(pool) - first[j])))
             out[0, j] = pool.pop(i)
     for k in range(1, len(frames)):
+        # A branch is looked for both where it was and where it was heading,
+        # and matched to whichever is nearer.  Neither alone is enough: near a
+        # critical value the colliding pair moves like the square root of the
+        # distance to it, travelling further in the final step than anywhere
+        # earlier, so the previous position alone mis-assigns exactly where the
+        # answer matters; but a path with corners breaks the smooth motion that
+        # extrapolation assumes, and there the previous position is the honest
+        # guess.
+        previous = out[k - 1]
+        heading = 2 * out[k - 1] - out[k - 2] if k >= 2 else previous
         remaining = list(frames[k])
         for j in range(n):
-            i = int(np.argmin(np.abs(np.array(remaining) - out[k - 1, j])))
-            out[k, j] = remaining.pop(i)
+            here = np.array(remaining)
+            cost = np.minimum(np.abs(here - previous[j]),
+                              np.abs(here - heading[j]))
+            out[k, j] = remaining.pop(int(np.argmin(cost)))
     return out
 
 

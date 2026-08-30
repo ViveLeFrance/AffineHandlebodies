@@ -100,8 +100,37 @@ def points(values, title=None, name='critical values', origin=None,
     return _equal_axes(fig)
 
 
-def trace(branches, title=None, highlight=None):
+def _loose_points(frames):
+    """Every computed value, tagged with how far along the path it came from.
+
+    Used when the values could not be sorted into branches: each step may hold
+    a different number of them, so there is nothing to join up and they are
+    drawn as they are.
+    """
+    xs, ys, ts = [], [], []
+    n = max(len(frames) - 1, 1)
+    for k, frame in enumerate(frames):
+        for value in np.asarray(frame):
+            v = complex(value)
+            xs.append(v.real); ys.append(v.imag); ts.append(k / n)
+    return np.array(xs), np.array(ys), np.array(ts)
+
+
+def trace(branches, title=None, highlight=None, loose=False, zmax=1.0):
     """Tracked branches projected to the complex plane."""
+    if loose:
+        x, y, t = _loose_points(branches)
+        t = t * zmax
+        fig = go.Figure(go.Scatter(
+            x=x, y=y, mode='markers',
+            marker=dict(size=POINT_SIZE, color=t, colorscale='Viridis',
+                        showscale=True,
+                        colorbar=dict(title='along the path', thickness=12)),
+            name='critical values',
+            hovertemplate='%{x:.6f} %{y:+.6f}i<extra></extra>'))
+        fig.update_layout(title=title, xaxis_title='Re', yaxis_title='Im',
+                          **LAYOUT)
+        return _equal_axes(fig)
     b = np.asarray(branches)
     fig = go.Figure()
     for j in range(b.shape[1]):
@@ -190,7 +219,8 @@ def _eye(ax, ay, az, pull=1.0):
     return dict(x=direction[0] * d, y=direction[1] * d, z=direction[2] * d)
 
 
-def trace3d(branches, title=None, highlight=None, zlabel='t', origin=None):
+def trace3d(branches, title=None, highlight=None, zlabel='t', origin=None,
+            loose=False, zmax=1.0):
     """Tracked branches with the path parameter as the vertical axis.
 
     Each horizontal slice is the set of tracked values over one point of the
@@ -199,12 +229,36 @@ def trace3d(branches, title=None, highlight=None, zlabel='t', origin=None):
     ratio squeezes an elongated region into an unreadable sliver, and what the
     picture is for is seeing which branches meet, not measuring distances.
     """
+    if loose:
+        x, y, t = _loose_points(branches)
+        t = t * zmax
+        fig = go.Figure(go.Scatter3d(
+            x=x, y=y, z=t, mode='markers',
+            marker=dict(size=POINT_SIZE_3D, color=t, colorscale='Viridis'),
+            name='critical values',
+            hovertemplate=(f'%{{x:.6f}} %{{y:+.6f}}i<br>{zlabel}=%{{z:.4f}}'
+                           f'<extra></extra>')))
+        bare = dict(showgrid=False, showbackground=False, zeroline=False)
+        fig.update_layout(
+            title=title, height=620,
+            scene=dict(xaxis=dict(title='Re', **bare),
+                       yaxis=dict(title='Im', **bare),
+                       zaxis=dict(title=zlabel, **bare),
+                       aspectmode='manual',
+                       aspectratio=dict(x=1.0, y=1.0, z=Z_ASPECT),
+                       camera=dict(eye=_eye(1.0, 1.0, Z_ASPECT))),
+            margin=dict(l=0, r=0, t=42, b=0), template='plotly_white',
+            hovermode='closest')
+        return fig
+
     b = np.asarray(branches)
     steps, n = b.shape
-    z = np.linspace(0, 1, steps)
+    # The vertical axis is the fraction of the path covered, so a run that
+    # stopped early shows as reaching only that far up.
+    z = np.linspace(0, zmax, steps)
 
     fig = go.Figure()
-    _floor(fig, b, origin, 0.0, 1.0)
+    _floor(fig, b, origin, 0.0, zmax)
     for j in range(n):
         strong = highlight is not None and j in highlight
         colour = _colour(j)

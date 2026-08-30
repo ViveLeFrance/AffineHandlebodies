@@ -124,7 +124,11 @@ def serve(preset=None, port=8765, open_browser=True, paths=((), ())):
                        'origin': PRESET.get('piorigin', 0)},
                 'rho': {'expression': PRESET['rho'],
                         'solvefor': PRESET.get('rhosolve') or None,
-                        'origin': PRESET.get('rhoorigin', 0)}}
+                        'origin': PRESET.get('rhoorigin', 0)},
+                # An example file is a finished set of choices, so it opens
+                # with everything shown; the two-step flow is for the page,
+                # where rho is still being settled.
+                'matching': True}
         PRESET_RESULT = compute(spec, paths)
         print('done', flush=True)
     server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
