@@ -52,8 +52,15 @@ def surface_and_pi(spec, paths=None):
     }
 
 
-def rho_section(study):
-    """Everything that needs rho: its critical values, its fibre, the traces."""
+def rho_section(study, numeric=False, verify=False):
+    """Everything that needs rho: its critical values, its fibre, the traces.
+
+    `numeric` switches the matching paths to the path tracker.  It is the whole
+    reason the flag reaches this far: on a high-degree surface the exact route
+    would be attempted here, on every matching path, before the page had drawn
+    anything at all.  The vanishing cycles are left alone -- those are numeric
+    root-finding already and stay quick whatever the degree.
+    """
     from . import web as R
     rho = study.rho
     cv = rho.critical_values()
@@ -95,19 +102,26 @@ def rho_section(study):
     out['matching'] = [{
         'name': m['name'], 'key': _slug(m['name']),
         'target': i if i < n_pi else None,
-        'result': described(m).replace('points', 'branches'),
+        'result': (m['error'] if m.get('error')
+                   else described(m).replace('points', 'branches')),
+        'failed': bool(m.get('error')),
         'closed': m['closed'],
-        'figure': _fig(R.trace3d(
+        'figure': None if m.get('error') else _fig(R.trace3d(
             m['branches'],
             title=f"pi: {m['name']} -- {described(m).replace('points','branches')}",
             highlight=None if m['closed'] else m['collision'][:2],
             origin=rho.origin_c)),
-    } for i, m in enumerate(study.matching_paths())]
+    } for i, m in enumerate(study.matching_paths(numeric=numeric,
+                                                 verify=verify))]
     return out
 
 
 def compute(spec, paths=None):
-    """Compute as much as the specification allows; report failures per stage."""
+    """Compute as much as the specification allows; report failures per stage.
+
+    `spec['numeric']` asks for the matching paths to be tracked rather than
+    solved afresh at every step.
+    """
     result = {'ok': True}
     try:
         study, pi_out = surface_and_pi(spec, paths)
@@ -125,7 +139,8 @@ def compute(spec, paths=None):
     if not spec.get('rho'):
         return result
     try:
-        result['rho'] = rho_section(study)
+        result['rho'] = rho_section(study, bool(spec.get('numeric')),
+                                    bool(spec.get('verify')))
     except Exception as exc:
         result['ok'] = False
         result['rho'] = _err('rho', exc)
@@ -159,7 +174,7 @@ def _described(m):
 
 
 def retrace(spec, waypoints, steps=70, rounding=0.0, label='edited path',
-            level='rho'):
+            level='rho', numeric=False, verify=False):
     """Trace along a path the user has drawn.
 
     At the rho level this follows the points of rho's fibre; at the pi level it
@@ -179,7 +194,8 @@ def retrace(spec, waypoints, steps=70, rounding=0.0, label='edited path',
                         steps=int(steps), rounding=rounding)
 
     if level == 'pi':
-        branches = study.bifibration.matching_path(path)
+        branches = study.bifibration.matching_path(path, numeric=numeric,
+                                                   verify=verify)
     else:
         branches = study.rho.trace_fibre(path)
 

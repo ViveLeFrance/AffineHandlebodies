@@ -48,6 +48,14 @@ button:disabled{background:#9bb8cf;cursor:default}
 .picker h3{font-size:.95rem;margin:0 0 .4rem;color:var(--fg)}
 .tools{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-top:.5rem}
 .tools label{font-size:.82rem}
+.tools input[type=checkbox]{width:auto;vertical-align:middle;margin-right:.2rem}
+.flag{margin:.9rem 0 0;font-size:.9rem}
+.flag label{color:var(--fg);font-weight:600}
+.flag input{width:auto;vertical-align:middle;margin-right:.35rem}
+.flag .note{display:block;color:var(--muted);font-size:.82rem;font-weight:400;
+            margin-top:.2rem;max-width:60ch}
+.flag label.sub{display:inline-block;margin-top:.5rem;font-weight:400;
+                color:var(--fg)}
 .tools input[type=number]{width:4.5rem;padding:.25rem .35rem}
 .tools input[type=range]{width:7rem;vertical-align:middle}
 .tools button{margin:0;padding:.32rem .8rem;font-size:.85rem}
@@ -83,6 +91,17 @@ fibres. Every plot pans and zooms.</p>
     <label for="pisolve">eliminate</label><input id="pisolve" spellcheck="false" placeholder="z">
     <label for="piorigin">origin of &pi;</label><input id="piorigin" spellcheck="false" placeholder="0">
   </div>
+  <p class="flag"><label>
+    <input type="checkbox" id="numeric"> track matching paths numerically
+  </label><span class="note">Follows the solutions along the path instead of
+    re-solving at every step. Much quicker at high degree, where the exact
+    route is not practical; leave it off for small surfaces, where the exact
+    route is instant and exact.</span>
+  <label class="sub"><input type="checkbox" id="verify"> check each path
+    against an exact solve at its end</label>
+  <span class="note">The strongest check there is, but that one solve can cost
+    many times the tracking it checks -- about twenty times, on a degree-14
+    surface -- so it is off unless you ask for it.</span></p>
   <button type="submit" id="bpi">Compute &pi;</button>
   <p class="hint">Write powers as <code>**</code>, the imaginary unit as <code>I</code>.
      Decimals are read exactly: <code>0.3</code> means 3/10.</p>
@@ -142,6 +161,8 @@ function spec(withRho){
     pi: {expression: $('pi').value.trim(),
          solvefor: $('pisolve').value.trim() || undefined,
          origin: $('piorigin').value.trim() || 0},
+    numeric: $('numeric').checked,
+    verify: $('verify').checked,
   };
   if (withRho) s.rho = {expression: $('rho').value.trim(),
                         solvefor: $('rhosolve').value.trim() || undefined,
@@ -295,7 +316,12 @@ function renderRho(r){
   h = document.createElement('h2'); h.textContent = 'Matching paths induced by \u03c0';
   host.appendChild(h);
   for (const m of q.matching){
-    if (m.target === null || m.target === undefined)
+    if (m.failed){
+      const div = document.createElement('div');
+      div.className = 'err';
+      div.textContent = `${m.name}: ${m.result}`;
+      host.appendChild(div);
+    } else if (m.target === null || m.target === undefined)
       plot(host, m.figure, m.name + ' \u2014 ' + m.result);
     else addPicker(host, m, r.pi.values, r.pi.origin_xy, 'pi');
   }
@@ -502,6 +528,8 @@ async function recompute(key){
       body: JSON.stringify({spec: spec(true), waypoints: ed.wp,
                             steps: Number(ed.steps.value) || 70,
                             rounding: ed.radius, level: ed.level,
+                            numeric: $('numeric').checked,
+                            verify: $('verify').checked,
                             label: ed.label})}).then(x => x.json());
     if (!r.ok){ showError(ed.out, r.error || 'failed'); return; }
     ed.out.innerHTML = '';
@@ -593,5 +621,16 @@ const PRESET = /*PRESET*/null;
   // Any edit means the file's own paths no longer apply.
   for (const id of ['domain','pi','pisolve','piorigin','rho','rhosolve','rhoorigin'])
     $(id).addEventListener('input', touched);
+  // Changing how the matching paths are computed does not change the surface,
+  // but what is already on screen was computed the other way; say so rather
+  // than leaving a stale answer looking current.
+  $('verify').addEventListener('change', touched);
+  $('numeric').addEventListener('change', () => {
+    touched();
+    if ($('rhoout').innerHTML)
+      $('rhoout').insertAdjacentHTML('afterbegin',
+        '<div class="err">The results below were computed the other way. '
+        + 'Press "Compute \u03c1" to redo them.</div>');
+  });
 })(PRESET);
 </script>

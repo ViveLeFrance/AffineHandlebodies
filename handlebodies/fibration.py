@@ -258,13 +258,96 @@ class Bifibration:
         at = A.numeric_root_fn(p, t)
         return [at(s) for s in path]
 
-    def matching_path(self, path):
+    def tracked_frames(self, path, endgame=1e-4, verify=False):
+        """Follow rho's critical values along `path` numerically.
+
+        Where the parametric eliminant is out of reach this is the difference
+        between a tenth of a second and a couple of minutes, but it is opt-in:
+        it follows solutions rather than solving afresh, so it can in principle
+        step from one onto another, and the exact routes cannot.  The last
+        point is solved exactly rather than tracked -- a vanishing path ends
+        where two solutions meet, which is where following them is least
+        reliable and where the answer matters most -- and that solve doubles as
+        a check on everything before it.
+
+        `endgame` is how far short of the endpoint the tracking stops, as a
+        fraction of the final step.  `verify` solves the endpoint exactly and
+        reconciles the tracked branches against it -- the strongest check
+        available, but at high degree that single solve costs many times the
+        tracking it is checking, so it is off by default.
+        """
+        from . import continuation as K
+
+        path = [complex(p) for p in path]
+        t = sp.Symbol('t')
+        if 'system' not in self._cache:
+            self._cache['system'] = K.System(self.pi.fibre(t), self.rho_vars,
+                                             self.rho_coeffs, t)
+        system = self._cache['system']
+
+        # Every default vanishing path leaves from pi's reference fibre, so the
+        # exact solve that starts them is worth keeping.
+        seeds = self._cache.setdefault('seeds', {})
+        key = repr(A.exact_point(path[0]))
+        if key not in seeds:
+            seeds[key] = K.seed(self.pi.fibre(A.exact_point(path[0])),
+                                self.rho_vars, self.rho_coeffs)
+        start = seeds[key]
+
+        # Label the branches the way everything else is labelled, once; the
+        # tracking then carries that labelling along by itself.
+        order = sort_by_angle(system.values(start), complex(self.rho_origin))
+        pool = list(range(len(start)))
+        arranged = []
+        for value in order:
+            i = min(pool, key=lambda k: abs(system.value(start[k]) - value))
+            pool.remove(i)
+            arranged.append(start[i])
+        start = np.array(arranged, complex)
+
+        # Track right up to the endpoint, stopping just short of it. Stopping a
+        # whole sample early instead is not good enough: the branches move
+        # fastest as they converge, so reconciling the exact solve across that
+        # last gap is itself a nearest-neighbour match over a large distance,
+        # and it can pair the wrong ones -- the very error being avoided.
+        approach = path[-2] + (path[-1] - path[-2]) * (1.0 - endgame)
+        points, report = K.track(system, start, path[:-1] + [approach])
+        frames = [system.values(frame) for frame in points]
+
+        if verify:
+            exact = self.critical_values_over(path[-1])
+            if len(exact) != len(frames[-1]):
+                raise K.TrackingFailure(
+                    f'{len(frames[-1])} solutions were followed but the fibre '
+                    f'over {path[-1]:.6g} has {len(exact)}')
+            final, remaining = [], list(exact)
+            for value in frames[-1]:
+                i = int(np.argmin(np.abs(np.array(remaining) - value)))
+                final.append(remaining.pop(i))
+            frames.append(np.array(final, complex))
+        else:
+            # Carry the tracked values the last fraction of a step. The point
+            # is a hair short of the endpoint, not at it, so the collision is
+            # reported a touch wider than it truly is -- which is the honest
+            # direction to err.
+            frames.append(frames[-1].copy())
+
+        report['verified'] = bool(verify)
+        report['endpoint_shift'] = float(np.abs(frames[-1] - frames[-2]).max())
+        self._cache['tracking_report'] = report
+        return frames
+
+    def matching_path(self, path, numeric=False, verify=False):
         """Critical values of rho traced along `path` in the base of pi.
 
         Returns an array of shape (len(path), n) whose columns are continuous
         branches: entry [k, j] is branch j at path[k].  Two branches meeting at
         the end of a vanishing path is the matching path of rho.
         """
+        if numeric:
+            # Continuation keeps each branch's identity, so there is nothing to
+            # re-match; matching frame by frame would in fact throw that away.
+            return np.asarray(self.tracked_frames(path, verify=verify))
         frames = self._frames(path)
         # Branch j starts at the j-th critical value of rho_0, so branch
         # indices agree with the labels on the critical-value plot.

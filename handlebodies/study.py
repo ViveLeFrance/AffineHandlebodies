@@ -111,7 +111,7 @@ class Study:
                    for i in range(len(self.cv.rho))]
         return default + self._rho_paths
 
-    def matching_paths(self, only=None):
+    def matching_paths(self, only=None, numeric=False, verify=False):
         """Trace the critical values of rho along each path in the base of pi.
 
         Two branches meeting is the matching path of rho corresponding to the
@@ -124,7 +124,20 @@ class Study:
             if only is not None and not only(name):
                 continue
             path = np.asarray(fn(self.cv))
-            branches = self.bifibration.matching_path(path)
+            try:
+                branches = self.bifibration.matching_path(
+                    path, numeric=numeric, verify=verify)
+            except Exception as exc:
+                # One path that cannot be followed must not take the rest with
+                # it.  A straight path that happens to run through another
+                # critical value of pi is not a vanishing path at all, and on a
+                # surface with several real critical values that is a normal
+                # thing to meet; the others are still worth having.
+                out.append({'name': name, 'path': path, 'branches': None,
+                            'closed': False, 'monodromy': None,
+                            'collision': None,
+                            'error': f'{type(exc).__name__}: {exc}'})
+                continue
             out.append(self._describe(name, path, branches))
         return out
 

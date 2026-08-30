@@ -90,7 +90,9 @@ class Handler(BaseHTTPRequestHandler):
                                  steps=body.get('steps', 70),
                                  rounding=body.get('rounding', 0.0),
                                  label=body.get('label', 'edited path'),
-                                 level=body.get('level', 'rho'))
+                                 level=body.get('level', 'rho'),
+                                 numeric=bool(body.get('numeric', False)),
+                                 verify=bool(body.get('verify', False)))
             else:
                 from .compute import compute
                 # Only the untouched preset gets the file's own paths; once a

@@ -16,6 +16,8 @@ BASELINE = pathlib.Path(__file__).parent / 'baseline.json'
 
 def _row(m):
     """One traced path: the colliding pair, or the permutation if it is closed."""
+    if m.get('error'):
+        return {'path': m['name'], 'closed': False, 'result': 'failed'}
     return {'path': m['name'], 'closed': m['closed'],
             'result': list(m['monodromy']) if m['closed']
                       else list(m['collision'][:2])}

@@ -171,11 +171,13 @@ def roots(p, prec=30):
     return np.array([complex(r) for r in p.nroots(n=prec, maxsteps=500)])
 
 
-def exact_point(value, digits=12):
+def exact_point(value, digits=9):
     """An exact rational (or Gaussian rational) close to a complex number.
 
-    Path points arrive as floats; rounding first keeps the denominators small
-    enough that the exact solvers stay quick.
+    Path points arrive as floats, so there is no exactness to preserve, and the
+    denominator this produces goes straight into the coefficients an exact
+    solver has to carry.  Nine digits costs about a third less than twelve on a
+    degree-14 fibre and moves the answer by around 1e-10.
     """
     c = complex(value)
     return (sp.Rational(str(round(c.real, digits)))
