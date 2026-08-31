@@ -96,6 +96,16 @@ details.sec.locked>.inner{display:none}
 details.sec fieldset{border:0;background:var(--panel);padding:.9rem 1rem}
 .blank{color:var(--muted);font-size:.88rem;border:1px dashed var(--line);
        border-radius:6px;padding:1.1rem .9rem;text-align:center}
+.perm{overflow-x:auto;margin:.35rem 0 0}
+.perm table{border-collapse:collapse}
+.perm th{text-align:right;padding:.15rem .5rem .15rem 0;color:var(--muted);
+         font-size:.78rem;font-weight:600;white-space:nowrap}
+.perm td{border:1px solid var(--line);padding:.12rem .4rem;text-align:center;
+         min-width:1.7rem;font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace}
+.perm tr+tr td{background:var(--panel)}
+.cyc{color:var(--muted);font-size:.82rem;margin:.35rem 0 0}
+.cyc b{color:var(--fg);font-weight:600;
+       font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 </style>
 <main>
 <h1>Lefschetz bifibrations</h1>
@@ -351,6 +361,53 @@ document.addEventListener('toggle', ev => {
     try { Plotly.Plots.resize(gd); } catch (e) { /* not laid out yet */ }
 }, true);
 
+// ---- what a closed path permutes --------------------------------------
+// A closed path comes back to the fibre it left, so its values end over the
+// same values they started at -- permuted.  Entry j of `perm` is the index of
+// the value branch j ends over.
+
+function cycles(perm){
+  const seen = new Array(perm.length).fill(false);
+  const out = [];
+  for (let j = 0; j < perm.length; j++){
+    if (seen[j]) continue;
+    const c = [];
+    for (let k = j; !seen[k]; k = perm[k]){ seen[k] = true; c.push(k); }
+    if (c.length > 1) out.push('(' + c.join(' ') + ')');
+  }
+  return out.length ? out.join('') : 'the identity';
+}
+
+function permTable(perm){
+  if (!Array.isArray(perm) || !perm.length) return '';
+  const top = perm.map((_, j) => `<td>${j}</td>`).join('');
+  const bot = perm.map(k => `<td>${esc(k)}</td>`).join('');
+  return `<div class="perm"><table>`
+    + `<tr><th>starts at</th>${top}</tr>`
+    + `<tr><th>ends over</th>${bot}</tr></table></div>`
+    + `<p class="cyc">as cycles: <b>${esc(cycles(perm))}</b></p>`;
+}
+
+// Indices name the values over the fibre a path starts from. That is the
+// reference fibre for anything based, and the plots above are labelled by it;
+// a path that starts elsewhere is labelled by its own starting fibre, and the
+// numbers cannot be read against those plots.
+function unbasedNote(based){
+  return based === false
+    ? '<p class="cyc">Indices here are those of the fibre this path starts '
+      + 'from, not the reference fibre; base the path to compare them with '
+      + 'the plots above.</p>'
+    : '';
+}
+
+// A figure, and beneath it the permutation when the path was a closed one.
+function showResult(host, figure, caption, perm, based){
+  const div = plot(host, figure, caption);
+  const extra = permTable(perm) + unbasedNote(based);
+  if (extra) div.parentNode.insertAdjacentHTML('beforeend', extra);
+  return div;
+}
+
 function chips(items){
   return '<div class="facts">' + items.map(([k,v,bad]) =>
     `<span class="chip${bad?' warn':''}">${esc(k)} <b>${esc(v)}</b></span>`).join('') + '</div>';
@@ -407,7 +464,7 @@ function renderMatching(r){
       div.textContent = `${m.name}: ${m.result}`;
       host.appendChild(div);
     } else if (m.target === null || m.target === undefined)
-      plot(host, m.figure, m.name + ' \u2014 ' + m.result);
+      showResult(host, m.figure, m.name + ' \u2014 ' + m.result, m.monodromy);
     else addPicker(host, m, r.pi.values, r.pi.origin_xy, 'pi');
   }
 }
@@ -432,8 +489,8 @@ function renderRho(r){
   h = document.createElement('h2'); h.textContent = 'Vanishing cycles of \u03c1';
   host.appendChild(h);
   for (const v of q.vanishing){
-    if (v.target === null || v.target === undefined)
-      plot(host, v.figure, v.name + ' \u2014 ' + v.result);   // path fixed in the example file
+    if (v.target === null || v.target === undefined)   // path fixed in the example file
+      showResult(host, v.figure, v.name + ' \u2014 ' + v.result, v.monodromy);
     else addPicker(host, v, q.values, q.origin_xy, 'rho');
   }
 
@@ -516,31 +573,26 @@ function defaultWaypoints(item, marks, origin){
   return [[origin[0], origin[1]], [target[0], target[1]]];
 }
 
-// A free path is closed by starting and ending it at the same number:
-// `is_closed` asks for equality, and no amount of dragging would land on it.
-//
-// The loop is opened halfway along its first segment rather than at the base
-// point.  Only interior waypoints have corners to round, so closing at the
-// base point would be closing at the one vertex that could not then be
-// smoothed; halfway along a straight stretch there is no corner to lose, and
-// every vertex of the loop -- the base point included -- becomes interior.
+// A closed path repeats its first corner at the end and is flagged as closed;
+// the server takes that seam as a corner like any other, and since a rounded
+// corner is taken *through* its node the path still begins and ends there
+// exactly -- which `is_closed` needs, asking for equality, and which keeps a
+// based path on the reference fibre however much its base point is rounded.
 function pathWaypoints(ed){
-  if (!(ed.closed && ed.wp.length > 1)) return ed.wp;
-  const a = ed.wp[0], b = ed.wp[1];
-  const mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-  return [mid].concat(ed.wp.slice(1), [a, mid]);
+  return ed.closed && ed.wp.length > 1 ? ed.wp.concat([ed.wp[0]]) : ed.wp;
 }
 
 function pathRadii(ed){
-  if (!(ed.closed && ed.wp.length > 1)) return ed.radius;
-  return [0].concat(ed.radius.slice(1), [ed.radius[0], 0]);
+  return ed.closed && ed.wp.length > 1 ? ed.radius.concat([0]) : ed.radius;
 }
 
-// Every vertex of a closed loop is a corner of it; on an open path the two
-// ends are where the path stops, and there is nothing there to round.
+// Every vertex of a closed loop is a corner of it, the base point included; on
+// an open path the two ends are where it stops, and there is nothing there to
+// round.
 function roundable(ed, i){
-  return i >= 0 && (ed.closed ? ed.wp.length > 1
-                              : (i > 0 && i < ed.wp.length - 1));
+  if (i < 0) return false;
+  if (ed.closed && ed.wp.length > 1) return true;
+  return i > 0 && i < ed.wp.length - 1;
 }
 
 function editorTraces(wp, marks, origin){
@@ -555,7 +607,7 @@ function editorTraces(wp, marks, origin){
     {x: [], y: [], mode: 'lines', line: {color: '#1f77b4', width: 2},
      name: 'path', hoverinfo: 'skip'},
     {x: wp.map(p => p[0]), y: wp.map(p => p[1]), mode: 'markers',
-     marker: cornerStyle(wp.length, -1, false),
+     marker: cornerStyle(wp.length, -1, i => i === 0 || i === wp.length - 1),
      name: 'corners', hovertemplate: '%{x:.4f} %{y:+.4f}i<extra></extra>'},
   ];
 }
@@ -563,22 +615,43 @@ function editorTraces(wp, marks, origin){
 // The ends of a vanishing path are the reference fibre and the critical value;
 // moving either would stop it being a vanishing path for that value, so they
 // are drawn as locked and refuse to be dragged or removed.
-function cornerStyle(n, sel, free){
+const START_COLOUR = '#9467bd';      // where the path sets off from
+
+function cornerStyle(n, sel, lockedAt){
   const colour = [], size = [], symbol = [];
   for (let i = 0; i < n; i++){
-    const locked = !free && (i === 0 || i === n - 1);
-    colour.push(locked ? '#9aa0a6' : (i === sel ? '#ff7f0e' : '#1f77b4'));
-    size.push(locked ? 9 : (i === sel ? 15 : 11));
+    const locked = lockedAt ? lockedAt(i) : false;
+    const start = (i === 0);
+    colour.push(i === sel ? '#ff7f0e'
+              : start ? START_COLOUR
+              : locked ? '#9aa0a6' : '#1f77b4');
+    size.push(i === sel ? 15 : start ? 13 : locked ? 9 : 11);
     symbol.push(locked ? 'square' : 'circle');
   }
   return {color: colour, size, symbol, line: {color: '#fff', width: 2}};
 }
 
-// Only a vanishing path has fixed ends: they are the reference fibre and the
+// Which way round the path is traced matters -- a loop's monodromy is its
+// inverse the other way -- and a drawn path shows no direction of itself.
+function directionArrow(ed){
+  if (ed.wp.length < 2) return [];
+  const [a, b] = [ed.wp[0], ed.wp[1]];
+  const at = t => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  const tail = at(0.42), head = at(0.58);
+  if (tail[0] === head[0] && tail[1] === head[1]) return [];
+  return [{x: head[0], y: head[1], ax: tail[0], ay: tail[1],
+           xref: 'x', yref: 'y', axref: 'x', ayref: 'y', text: '',
+           showarrow: true, arrowhead: 2, arrowsize: 1.5, arrowwidth: 2,
+           arrowcolor: START_COLOUR}];
+}
+
+// A vanishing path has both ends fixed: they are the reference fibre and the
 // critical value, and moving either would stop it being one.  A free path is
-// free at both ends.
+// pinned only where it is based -- at the reference fibre, which is what makes
+// its indices the labelled ones -- and not at all when it is not.
 function isLocked(ed, i){
-  return !ed.free && (i === 0 || i === ed.wp.length - 1);
+  if (!ed.free) return i === 0 || i === ed.wp.length - 1;
+  return ed.based && i === 0;
 }
 
 const EDITOR_LAYOUT = {
@@ -626,7 +699,9 @@ function insertionIndex(wp, pt){
 
 function redrawPath(ed, preview){
   Plotly.restyle(ed.gd, {x: [ed.wp.map(p => p[0])], y: [ed.wp.map(p => p[1])],
-                         marker: [cornerStyle(ed.wp.length, ed.sel, ed.free)]}, [3]);
+                         marker: [cornerStyle(ed.wp.length, ed.sel,
+                                                 i => isLocked(ed, i))]}, [3]);
+  Plotly.relayout(ed.gd, {annotations: directionArrow(ed)});
   if (preview !== false) refreshPreview(ed);
   showCornerControl(ed);
 }
@@ -640,7 +715,8 @@ async function refreshPreview(ed){
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({waypoints: pathWaypoints(ed),
                             steps: Number(ed.steps.value) || 70,
-                            rounding: pathRadii(ed)})}).then(x => x.json());
+                            rounding: pathRadii(ed),
+                            closed: ed.closed})}).then(x => x.json());
     if (token !== ed.token || !r.ok) return;
     Plotly.restyle(ed.gd, {x: [r.path.map(p => p[0])], y: [r.path.map(p => p[1])]}, [2]);
   } catch (e) { /* preview only */ }
@@ -662,21 +738,23 @@ function attachEditing(ed){
   gd.addEventListener('mousedown', ev => {
     const hit = nearestWaypoint(gd, ev, ed.wp);
     if (hit < 0) return;
-    if (isLocked(ed, hit)){                           // ends are fixed
-      ev.preventDefault(); ev.stopPropagation(); return;
-    }
-    if (ev.altKey || ev.ctrlKey || ev.metaKey){       // remove a corner
-      if (ed.wp.length <= 2){ ev.preventDefault(); ev.stopPropagation(); return; }
-      ed.wp.splice(hit, 1); ed.radius.splice(hit, 1);
-      if (ed.sel === hit) ed.sel = -1;
-      else if (ed.sel > hit) ed.sel--;
-      redrawPath(ed);
-      ev.preventDefault(); ev.stopPropagation(); return;
+    ev.preventDefault(); ev.stopPropagation();
+    // Being fixed stops a corner being moved or removed. It does not stop it
+    // being selected: a closed path's base point is fixed and still has a
+    // turn to round, so it has to be reachable.
+    if (!isLocked(ed, hit)){
+      if (ev.altKey || ev.ctrlKey || ev.metaKey){     // remove a corner
+        if (ed.wp.length <= 2) return;
+        ed.wp.splice(hit, 1); ed.radius.splice(hit, 1);
+        if (ed.sel === hit) ed.sel = -1;
+        else if (ed.sel > hit) ed.sel--;
+        redrawPath(ed);
+        return;
+      }
+      dragging = hit;
     }
     ed.sel = hit;                                     // clicking selects it
-    dragging = hit;
     redrawPath(ed, false);
-    ev.preventDefault(); ev.stopPropagation();
   }, true);
   window.addEventListener('mousemove', ev => {
     if (dragging < 0) return;
@@ -706,13 +784,14 @@ async function recompute(key){
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({spec: spec(true), waypoints: pathWaypoints(ed),
                             steps: Number(ed.steps.value) || 70,
-                            rounding: pathRadii(ed), level: ed.level,
+                            rounding: pathRadii(ed), closed: ed.closed,
+                            level: ed.level,
                             numeric: $('numeric').checked,
                             verify: $('verify').checked,
                             label: ed.label})}).then(x => x.json());
     if (!r.ok){ showError(ed.out, r.error || 'failed'); return; }
     ed.out.innerHTML = '';
-    plot(ed.out, untitled(r.figure), null);
+    showResult(ed.out, untitled(r.figure), null, r.monodromy, r.based);
   } catch (e){ showError(ed.out, e.message); }
   finally { ed.button.disabled = false; ed.button.textContent = ed.verb; }
 }
@@ -733,13 +812,19 @@ function addPicker(host, v, marks, origin, level, opts){
           <span class="selnote" id="sn-${key}"></span>
           <label>rounding <input type="range" id="rd-${key}" min="0" max="1" step="0.05" value="0"></label>
         </span>
-        ${free ? `<label><input type="checkbox" id="cl-${key}"> closed loop</label>` : ''}
+        ${free ? `<label title="pin the path to the reference fibre, so that\
+ the indices are the ones on the plots above"><input type="checkbox"\
+ id="bs-${key}" checked> based</label>
+        <label><input type="checkbox" id="cl-${key}"> closed loop</label>` : ''}
         <button id="go-${key}">${free ? 'Compute' : 'Recompute'}</button>
         <button class="ghost" id="rs-${key}">Reset</button>
         ${free ? `<button class="ghost" id="rm-${key}">Remove</button>` : ''}
       </div>
       <p class="keys">shift-click to add a corner &middot; click one to select it, drag to move
-         &middot; alt-click to remove${free ? '' : ' &middot; the ends are fixed'}</p>
+         &middot; alt-click to remove &middot; the start is purple, and the
+         arrow gives the direction &middot; ${free
+           ? 'a based path is pinned at the reference fibre'
+           : 'the ends are fixed'}</p>
     </div>
     <div>
       <h3>${level === 'pi' ? 'matching path along it' : 'collisions along it'}</h3>
@@ -761,10 +846,11 @@ function addPicker(host, v, marks, origin, level, opts){
     const shown = withOpeningView(untitled(v.figure), out);
     Plotly.newPlot(out, shown.data, shown.layout,
                    {displaylogo: false, responsive: true});
+    out.insertAdjacentHTML('beforeend', permTable(v.monodromy));
   }
 
   const ed = EDITORS[key] = {wp, gd, out, label: v.name, level, sel: -1, token: 0,
-    free, closed: false, verb: free ? 'Compute' : 'Recompute',
+    free, closed: false, based: true, verb: free ? 'Compute' : 'Recompute',
     radius: wp.map(() => 0),
     steps: $(`st-${key}`), round: $(`rd-${key}`), corner: $(`cn-${key}`),
     selnote: $(`sn-${key}`), button: $(`go-${key}`)};
@@ -787,6 +873,13 @@ function addPicker(host, v, marks, origin, level, opts){
     $(`cl-${key}`).addEventListener('change', ev => {
       ed.closed = ev.target.checked;
       redrawPath(ed);          // closing the loop makes every vertex a corner
+    });
+    $(`bs-${key}`).addEventListener('change', ev => {
+      ed.based = ev.target.checked;
+      // Basing it means running through the reference fibre, so the first
+      // corner goes there and stays.
+      if (ed.based) ed.wp[0] = [origin[0], origin[1]];
+      redrawPath(ed);
     });
     $(`rm-${key}`).addEventListener('click', () => {
       delete EDITORS[key];

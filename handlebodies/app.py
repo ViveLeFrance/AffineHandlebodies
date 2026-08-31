@@ -83,7 +83,8 @@ class Handler(BaseHTTPRequestHandler):
                 from .compute import sample_path
                 result = sample_path(body['waypoints'],
                                      steps=body.get('steps', 70),
-                                     rounding=body.get('rounding', 0.0))
+                                     rounding=body.get('rounding', 0.0),
+                                     closed=bool(body.get('closed', False)))
             elif self.path == '/api/trace':
                 from .compute import retrace
                 result = retrace(body['spec'], body['waypoints'],
@@ -92,7 +93,8 @@ class Handler(BaseHTTPRequestHandler):
                                  label=body.get('label', 'edited path'),
                                  level=body.get('level', 'rho'),
                                  numeric=bool(body.get('numeric', False)),
-                                 verify=bool(body.get('verify', False)))
+                                 verify=bool(body.get('verify', False)),
+                                 closed=bool(body.get('closed', False)))
             else:
                 from .compute import compute
                 # Only the untouched preset gets the file's own paths; once a

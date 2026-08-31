@@ -107,7 +107,7 @@ def rho_section(study):
         if m.get('branches') is None:
             return m.get('note', 'shown as computed')
         if m['closed']:
-            return f"monodromy {m['monodromy']}"
+            return _monodromy_text(m['monodromy'])
         i, j, gap = m['collision']
         return f"points {i} and {j} collide (gap {gap:.1e})"
 
@@ -116,6 +116,7 @@ def rho_section(study):
         'name': m['name'], 'key': _slug(m['name']),
         'target': i if i < n_rho else None,
         'result': described(m), 'closed': m['closed'],
+        'monodromy': m['monodromy'],
         'figure': _fig(R.trace(
             m['branches'], title=f"rho: {m['name']} -- {described(m)}",
             highlight=None if m['closed'] else m['collision'][:2])),
@@ -140,7 +141,7 @@ def matching_section(study, numeric=False, verify=False):
         if m.get('branches') is None:
             return 'shown as computed'
         if m['closed']:
-            return f"monodromy {m['monodromy']}"
+            return _monodromy_text(m['monodromy'])
         i, j, gap = m['collision']
         return f"points {i} and {j} collide (gap {gap:.1e})"
 
@@ -159,6 +160,7 @@ def _traced(m, i, n_default, render, origin, described):
     row = {'name': m['name'], 'key': _slug(m['name']),
            'target': i if i < n_default else None,
            'closed': m['closed'],
+           'monodromy': m.get('monodromy'),
            'failed': bool(m.get('error')),
            'tracked': m.get('branches') is not None}
     if m.get('error'):
@@ -176,7 +178,7 @@ def _traced(m, i, n_default, render, origin, described):
         row['figure'] = _fig(render(
             m['branches'], title=title,
             highlight=None if m['collision'] is None else m['collision'][:2],
-            origin=origin, zmax=zmax))
+            origin=origin, zmax=zmax, returns=m.get('monodromy')))
     return row
 
 
@@ -238,15 +240,27 @@ def _tex_block(fibration, symbol, variables, fibre_expr):
     return r'\begin{aligned}' + r' \\[2pt] '.join(lines) + r'\end{aligned}'
 
 
+def _monodromy_text(perm):
+    """How a closed path reads.
+
+    A permutation that is not a bijection means the branches could not be
+    matched up across the ends, which is a failure to report rather than a
+    monodromy to quote.
+    """
+    if perm is None:
+        return 'closed path; the branches could not be matched up at its end'
+    return f'monodromy {perm}'
+
+
 def _described(m):
     if m['closed']:
-        return f"monodromy {m['monodromy']}"
+        return _monodromy_text(m['monodromy'])
     i, j, gap = m['collision']
     return f"points {i} and {j} collide (gap {gap:.1e})"
 
 
 def retrace(spec, waypoints, steps=70, rounding=0.0, label='edited path',
-            level='rho', numeric=False, verify=False):
+            level='rho', numeric=False, verify=False, closed=False):
     """Trace along a path the user has drawn.
 
     At the rho level this follows the points of rho's fibre; at the pi level it
@@ -264,7 +278,7 @@ def retrace(spec, waypoints, steps=70, rounding=0.0, label='edited path',
     study = study_for(spec)
     # rounding is one value per waypoint (or a single number for all of them)
     path = rounded_path([complex(a, b) for a, b in waypoints],
-                        steps=int(steps), rounding=rounding)
+                        steps=int(steps), rounding=rounding, closed=closed)
 
     if level == 'pi':
         frames, branches = study.bifibration.matching_path(
@@ -273,6 +287,11 @@ def retrace(spec, waypoints, steps=70, rounding=0.0, label='edited path',
         frames = branches = study.rho.trace_fibre(path)
 
     closed = is_closed(path)
+    # Branch indices name the values over the fibre the path starts from. Only
+    # a path that starts at the reference fibre gets the indices the plots are
+    # labelled with; report which it is rather than leaving the numbers to be
+    # read against the wrong picture.
+    based = _is_based(path, study, level)
     if branches is None:
         # The values are the result; sorting them into branches is not. Say so
         # and draw them as they came out.
@@ -282,7 +301,7 @@ def retrace(spec, waypoints, steps=70, rounding=0.0, label='edited path',
                             origin=study.rho.origin_c) if level == 'pi'
                   else R.trace(frames, title=f'{label} -- {text}', loose=True))
         return {'ok': True, 'result': text, 'closed': closed, 'tracked': False,
-                'steps': len(path), 'figure': _fig(figure),
+                'based': based, 'steps': len(path), 'figure': _fig(figure),
                 'path': [[float(p.real), float(p.imag)] for p in path]}
 
     m = {'name': label, 'closed': closed,
@@ -293,7 +312,8 @@ def retrace(spec, waypoints, steps=70, rounding=0.0, label='edited path',
     if level == 'pi':
         text = text.replace('points', 'branches')
         figure = R.trace3d(branches, title=f'{label} -- {text}',
-                           highlight=highlight, origin=study.rho.origin_c)
+                           highlight=highlight, origin=study.rho.origin_c,
+                           returns=m['monodromy'])
     else:
         figure = R.trace(branches, title=f'{label} -- {text}',
                          highlight=highlight)
@@ -301,6 +321,8 @@ def retrace(spec, waypoints, steps=70, rounding=0.0, label='edited path',
         'ok': True,
         'result': text,
         'closed': closed,
+        'monodromy': m['monodromy'],
+        'based': based,
         'tracked': True,
         'steps': len(path),
         'figure': _fig(figure),
@@ -308,9 +330,20 @@ def retrace(spec, waypoints, steps=70, rounding=0.0, label='edited path',
     }
 
 
-def sample_path(waypoints, steps=70, rounding=0.0):
+def _is_based(path, study, level):
+    """Whether a path starts at the reference fibre of the base it lives in.
+
+    The page pins a based path there exactly, so this is an equality test with
+    room only for the rounding the path picker's coordinates went through.
+    """
+    origin = study.pi.origin_c if level == 'pi' else study.rho.origin_c
+    return bool(abs(complex(path[0]) - origin)
+                <= 1e-9 * max(1.0, abs(origin)))
+
+
+def sample_path(waypoints, steps=70, rounding=0.0, closed=False):
     """Just the sampled path -- no tracing, so this is cheap enough to preview."""
     from .paths import rounded_path
     path = rounded_path([complex(a, b) for a, b in waypoints],
-                        steps=int(steps), rounding=rounding)
+                        steps=int(steps), rounding=rounding, closed=closed)
     return {'ok': True, 'path': [[float(p.real), float(p.imag)] for p in path]}

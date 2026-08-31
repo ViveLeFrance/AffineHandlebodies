@@ -45,6 +45,9 @@ AXIS_COLOUR = '#444'
 #: height of the t axis relative to the widest of Re and Im
 Z_ASPECT = 0.25
 GRID_COLOUR = 'rgba(0,0,0,0.13)'
+#: the vertical lines joining a closed path's start values to the same values
+#: at its end; darker than the floor grid, which they cross, but still faint
+RETURN_COLOUR = 'rgba(0,0,0,0.28)'
 
 
 def _equal_axes(fig):
@@ -204,6 +207,24 @@ def _floor(fig, b, origin, z0, z1, divisions=6):
     return (hi_x - lo_x), (hi_y - lo_y)
 
 
+def _returns(fig, values, z0, z1):
+    """A thin vertical line at each of a closed path's starting values.
+
+    A closed path ends over the fibre it started from, so the values standing
+    at the foot of these lines stand at their heads too, and the permutation is
+    read off by following a branch from one to another.
+    """
+    xs, ys, zs = [], [], []
+    for value in np.asarray(values):
+        v = complex(value)
+        xs += [v.real, v.real, None]
+        ys += [v.imag, v.imag, None]
+        zs += [z0, z1, None]
+    fig.add_trace(go.Scatter3d(x=xs, y=ys, z=zs, mode='lines',
+                               line=dict(color=RETURN_COLOUR, width=1),
+                               hoverinfo='skip', showlegend=False))
+
+
 def _eye(ax, ay, az, pull=1.0):
     """Camera position scaled to the aspect box.
 
@@ -219,7 +240,7 @@ def _eye(ax, ay, az, pull=1.0):
 
 
 def trace3d(branches, title=None, highlight=None, zlabel='t', origin=None,
-            loose=False, zmax=1.0):
+            loose=False, zmax=1.0, returns=None):
     """Tracked branches with the path parameter as the vertical axis.
 
     Each horizontal slice is the set of tracked values over one point of the
@@ -227,6 +248,12 @@ def trace3d(branches, title=None, highlight=None, zlabel='t', origin=None,
     rather than held to a common scale: in three dimensions a faithful aspect
     ratio squeezes an elongated region into an unreadable sliver, and what the
     picture is for is seeing which branches meet, not measuring distances.
+
+    `returns` is the permutation a closed path induces -- entry j being the
+    index of the value branch j ends over.  Given it, a thin vertical line is
+    drawn at each starting value: a closed path comes back to the fibre it left
+    from, so those same values stand at the top as well, and each branch can be
+    seen leaving the foot of one line and arriving at the head of another.
     """
     if loose:
         x, y, t = _loose_points(branches)
@@ -258,6 +285,8 @@ def trace3d(branches, title=None, highlight=None, zlabel='t', origin=None,
 
     fig = go.Figure()
     _floor(fig, b, origin, 0.0, zmax)
+    if returns is not None:
+        _returns(fig, b[0], 0.0, zmax)
     for j in range(n):
         strong = highlight is not None and j in highlight
         colour = _colour(j)
@@ -275,7 +304,11 @@ def trace3d(branches, title=None, highlight=None, zlabel='t', origin=None,
         text=[str(j) for j in range(n)],
         marker=dict(size=3, color='#d62728'), name='start'))
     fig.add_trace(go.Scatter3d(
-        x=b[-1].real, y=b[-1].imag, z=[z[-1]] * n, mode='markers',
+        x=b[-1].real, y=b[-1].imag, z=[z[-1]] * n,
+        mode='markers+text' if returns is not None else 'markers',
+        # The label is the index of the value the branch ends over, so the
+        # head of each return line carries the same number as its foot.
+        text=None if returns is None else [str(i) for i in returns],
         marker=dict(size=3, color='#2ca02c'), name='end'))
 
     # Re and Im each fill the frame; t is kept short so the slices stay legible.

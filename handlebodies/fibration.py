@@ -374,10 +374,16 @@ class Bifibration:
             frames = self.tracked_frames(path, verify=verify)
             return frames, np.asarray(frames)
         frames = self._frames(path)
-        # Branch j starts at the j-th critical value of rho_0, so branch
-        # indices agree with the labels on the critical-value plot.
+        # Branch j starts at the j-th value over the path's first point,
+        # ordered by angle about rho's reference value.  For a path leaving
+        # pi's reference fibre those are rho_0's critical values in the order
+        # `critical_values` returns them, so branch indices agree with the
+        # labels on the critical-value plot; for a path that starts elsewhere
+        # -- a loop drawn anywhere in the base -- they are the values it
+        # actually starts from, which is what the numeric route already used.
         try:
-            branches = track(frames, first=self.rho_0.critical_values())
+            branches = track(frames, first=sort_by_angle(frames[0],
+                                                         self.rho_0.origin_c))
         except Exception:
             branches = None
         return frames, branches
