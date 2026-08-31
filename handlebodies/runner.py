@@ -5,17 +5,16 @@ without side effects -- so run() does nothing unless the module is being
 executed directly.
 """
 
-import argparse
-import math
-import sys
-
-
 def _preset_from(module):
-    """The page's starting values, taken from an example file."""
-    import sympy as sp
+    """The page's starting values, taken from an example file.
 
+    A module with no DOMAIN is a blank one -- model.py, or an example being
+    written -- and opens the page with nothing filled in.
+    """
     from .study import Study
     g = vars(module)
+    if not g.get('DOMAIN'):
+        return {}
     study = Study(name=g.get('NAME', 'example'), domain=g['DOMAIN'],
                   params=g.get('PARAMS'), pi=dict(g['PI']), rho=dict(g['RHO']))
     params = ', '.join(f'{k}={v}' for k, v in (g.get('PARAMS') or {}).items())
@@ -55,6 +54,6 @@ def run(name=None, argv=None):
     from .app import serve
     g = vars(module)
     preset = _preset_from(module)
-    print(f"{preset['name']}", flush=True)
+    print(preset.get('name', 'a blank study'), flush=True)
     serve(preset, port=args.port, open_browser=not args.no_browser,
           paths=(g.get('PI_PATHS', ()), g.get('RHO_PATHS', ())))

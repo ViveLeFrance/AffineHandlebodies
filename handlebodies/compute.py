@@ -7,8 +7,6 @@ The pi half is computed alone when rho has not been filled in yet.
 
 import json
 
-import sympy as sp
-
 from .study import Study, _slug
 
 
@@ -123,7 +121,6 @@ def rho_section(study):
             highlight=None if m['closed'] else m['collision'][:2])),
     } for i, m in enumerate(study.vanishing_cycles())]
 
-    n_pi = len(study.cv.pi)
     return out
 
 
@@ -232,7 +229,6 @@ def _tex_block(fibration, symbol, variables, fibre_expr):
     import sympy as sp
 
     args = ','.join(sp.latex(v) for v in variables)
-    sub = '0' if symbol == r'\pi' else '1'
     pt = 'z_0' if symbol == r'\pi' else 'w_0'
     lines = [
         rf'{symbol}({args}) &= {sp.latex(fibration.expression)}',
@@ -262,9 +258,10 @@ def retrace(spec, waypoints, steps=70, rounding=0.0, label='edited path',
     from .fibration import collision, is_closed, monodromy
     from .paths import rounded_path
 
-    study = Study(name=spec.get('name', 'surface'),
-                  domain=spec['domain'], params=spec.get('params') or None,
-                  pi=spec['pi'], rho=spec['rho'])
+    # Through study_for, so that redrawing a path does not pay again for the
+    # critical values the page has already shown -- which is most of the cost
+    # of a recompute on a high-degree surface.
+    study = study_for(spec)
     # rounding is one value per waypoint (or a single number for all of them)
     path = rounded_path([complex(a, b) for a, b in waypoints],
                         steps=int(steps), rounding=rounding)

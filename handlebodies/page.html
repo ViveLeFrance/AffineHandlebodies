@@ -56,6 +56,8 @@ button:disabled{background:#9bb8cf;cursor:default}
             margin-top:.2rem;max-width:60ch}
 .flag label.sub{display:inline-block;margin-top:.5rem;font-weight:400;
                 color:var(--fg)}
+.flag .opt.off{opacity:.45}
+.flag .opt.off label{cursor:default}
 .tools input[type=number]{width:4.5rem;padding:.25rem .35rem}
 .tools input[type=range]{width:7rem;vertical-align:middle}
 .tools button{margin:0;padding:.32rem .8rem;font-size:.85rem}
@@ -74,14 +76,37 @@ button.del{margin:0;padding:.1rem .45rem;background:#fff;color:var(--muted);
 .tex{background:#fff;border:1px solid var(--line);border-radius:6px;
      padding:.7rem .9rem;margin:.6rem 0;overflow-x:auto}
 .busy{color:var(--muted);font-size:.9rem;margin:.6rem 0}
+details.sec{border:1px solid var(--line);border-radius:10px;background:#fff;
+            margin:0 0 .9rem}
+details.sec>summary{cursor:pointer;list-style:none;padding:.7rem 1rem;
+  font-size:1.02rem;font-weight:600;display:flex;align-items:center;gap:.5rem;
+  border-radius:10px}
+details.sec>summary::-webkit-details-marker{display:none}
+details.sec>summary::before{content:'\25b8';color:var(--muted);font-size:.85rem;
+  display:inline-block;transition:transform .12s}
+details.sec[open]>summary::before{transform:rotate(90deg)}
+details.sec>summary:hover{background:var(--panel)}
+details.sec>summary .why{margin-left:auto;color:var(--muted);font-size:.82rem;
+  font-weight:400}
+details.sec>.inner{padding:0 1rem 1rem}
+details.sec>.inner>h2:first-child{margin-top:.4rem}
+details.sec.locked>summary{color:var(--muted);cursor:default}
+details.sec.locked>summary:hover{background:none}
+details.sec.locked>.inner{display:none}
+details.sec fieldset{border:0;background:var(--panel);padding:.9rem 1rem}
+.blank{color:var(--muted);font-size:.88rem;border:1px dashed var(--line);
+       border-radius:6px;padding:1.1rem .9rem;text-align:center}
 </style>
 <main>
 <h1>Lefschetz bifibrations</h1>
 <p class="sub">Enter a surface and a fibration &pi;; then a fibration &rho; on its
 fibres. Every plot pans and zooms.</p>
 
+<details class="sec" id="secpi" open>
+<summary>Surface and &pi;</summary>
+<div class="inner">
 <form id="fpi">
-<fieldset><legend>Surface and &pi;</legend>
+<fieldset>
   <div class="row">
     <label for="domain">Surface X</label><input id="domain" spellcheck="false">
     <label>Parameters</label>
@@ -91,17 +116,6 @@ fibres. Every plot pans and zooms.</p>
     <label for="pisolve">eliminate</label><input id="pisolve" spellcheck="false" placeholder="z">
     <label for="piorigin">origin of &pi;</label><input id="piorigin" spellcheck="false" placeholder="0">
   </div>
-  <p class="flag"><label>
-    <input type="checkbox" id="numeric"> track matching paths numerically
-  </label><span class="note">Follows the solutions along the path instead of
-    re-solving at every step. Much quicker at high degree, where the exact
-    route is not practical; leave it off for small surfaces, where the exact
-    route is instant and exact.</span>
-  <label class="sub"><input type="checkbox" id="verify"> check each path
-    against an exact solve at its end</label>
-  <span class="note">The strongest check there is, but that one solve can cost
-    many times the tracking it checks -- about twenty times, on a degree-14
-    surface -- so it is off unless you ask for it.</span></p>
   <button type="submit" id="bpi">Compute &pi;</button>
   <p class="hint">Write powers as <code>**</code>, the imaginary unit as <code>I</code>.
      Decimals are read exactly: <code>0.3</code> means 3/10.</p>
@@ -109,9 +123,14 @@ fibres. Every plot pans and zooms.</p>
 </form>
 <div id="pibusy" class="busy hidden">computing&hellip;</div>
 <div id="piout"></div>
+</div>
+</details>
 
-<form id="frho" class="hidden">
-<fieldset><legend>&rho;</legend>
+<details class="sec locked" id="secrho">
+<summary>&rho;<span class="why">compute &pi; first</span></summary>
+<div class="inner">
+<form id="frho">
+<fieldset>
   <div class="row">
     <label for="rho">&rho;</label><input id="rho" spellcheck="false">
     <label for="rhosolve">eliminate</label><input id="rhosolve" spellcheck="false">
@@ -123,17 +142,54 @@ fibres. Every plot pans and zooms.</p>
 </form>
 <div id="rhobusy" class="busy hidden">computing&hellip;</div>
 <div id="rhoout"></div>
+</div>
+</details>
 
-<form id="fmatch" class="hidden">
-<fieldset><legend>Matching paths</legend>
+<details class="sec locked" id="secmatch">
+<summary>Matching paths<span class="why">compute &rho; first</span></summary>
+<div class="inner">
+<form id="fmatch">
+<fieldset>
   <p class="hint" style="margin:0 0 .6rem">Tracing &rho;'s critical values over
      the fibres of &pi; is much the most expensive step, so it is asked for
      separately &mdash; settle on a &rho; first.</p>
+  <p class="flag"><label>
+    <input type="checkbox" id="numeric"> track the paths numerically
+  </label><span class="note">Follows the solutions along the path instead of
+    re-solving at every step. Much quicker at high degree, where the exact
+    route is not practical; leave it off for small surfaces, where the exact
+    route is instant and exact.</span>
+  <span class="opt off" id="verifyopt">
+    <label class="sub"><input type="checkbox" id="verify" disabled> check each
+      path against an exact solve at its end</label>
+    <span class="note">Only means anything when the paths are tracked: it is
+      the tracking it checks. The strongest check there is, but that one solve
+      can cost many times the tracking -- about twenty times, on a degree-14
+      surface -- so it is off unless you ask for it.</span>
+  </span></p>
   <button type="submit" id="bmatch">Compute matching paths</button>
 </fieldset>
 </form>
 <div id="matchbusy" class="busy hidden">computing&hellip;</div>
 <div id="matchout"></div>
+</div>
+</details>
+
+<details class="sec locked" id="secmore">
+<summary>Additional computations<span class="why">compute &rho; first</span></summary>
+<div class="inner">
+<p class="hint">Paths that are not vanishing paths: any route through either
+   base, with both ends free to move. Draw one, press Compute, and the result
+   appears beside it &mdash; read the same way as above, so an open path
+   reports the two branches that meet at its end and a closed loop the
+   permutation it induces.</p>
+<div class="tools">
+  <button class="ghost" id="newpi">+ path in the base of &pi;</button>
+  <button class="ghost" id="newrho">+ path in the base of &rho;</button>
+</div>
+<div id="freeout"></div>
+</div>
+</details>
 </main>
 
 <script>
@@ -259,6 +315,42 @@ function flushTex(){
 }
 window.flushTex = flushTex;
 
+// ---- sections ----------------------------------------------------------
+// A section is locked until the computation it needs has been done: there is
+// no point offering rho's box before pi has told us what its variables are.
+
+function unlock(id, open){
+  const sec = $(id);
+  sec.classList.remove('locked');
+  const why = sec.querySelector('.why');
+  if (why) why.textContent = '';
+  if (open) sec.open = true;
+  return sec;
+}
+
+function lock(id, why){
+  const sec = $(id);
+  sec.classList.add('locked');
+  sec.open = false;
+  const w = sec.querySelector('.why');
+  if (w) w.textContent = why;
+}
+
+for (const id of ['secrho', 'secmatch', 'secmore'])
+  $(id).querySelector('summary').addEventListener('click', ev => {
+    if ($(id).classList.contains('locked')) ev.preventDefault();
+  });
+
+// A plot laid out inside a collapsed section has no width to lay out in, so
+// it comes back the wrong size; ask plotly to measure again on the way open.
+// `toggle` does not bubble, hence the capture phase.
+document.addEventListener('toggle', ev => {
+  const el = ev.target;
+  if (!(el.open && el.classList && el.classList.contains('sec'))) return;
+  for (const gd of el.querySelectorAll('.js-plotly-plot'))
+    try { Plotly.Plots.resize(gd); } catch (e) { /* not laid out yet */ }
+}, true);
+
 function chips(items){
   return '<div class="facts">' + items.map(([k,v,bad]) =>
     `<span class="chip${bad?' warn':''}">${esc(k)} <b>${esc(v)}</b></span>`).join('') + '</div>';
@@ -293,7 +385,8 @@ function renderPi(r){
     + `<div class="tex">$$${p.tex}$$</div>`;
   typeset(host);
   plot(host, p.figure, 'Critical values of pi, with the reference fibre in green.');
-  $('frho').classList.remove('hidden');
+  LAST.pi = {values: p.values, origin: p.origin_xy};
+  unlock('secrho', true);
   $('rhohint').textContent =
     'A linear form in the variables other than ' + ($('pisolve').value.trim() || 'the eliminated one') + '.';
   return true;
@@ -302,6 +395,7 @@ function renderPi(r){
 function renderMatching(r){
   const host = $('matchout');
   host.innerHTML = '';
+  unlock('secmatch', true);
   if (r.matching && r.matching.error){ showError(host, r.matching.error); return; }
   const h = document.createElement('h2');
   h.textContent = 'Matching paths induced by \u03c0';
@@ -343,16 +437,26 @@ function renderRho(r){
     else addPicker(host, v, q.values, q.origin_xy, 'rho');
   }
 
+  LAST.rho = {values: q.values, origin: q.origin_xy};
   // The matching paths are asked for separately; they cost far more than
   // everything above and rho usually wants several attempts first.
-  $('fmatch').classList.remove('hidden');
+  unlock('secmatch', true);
+  unlock('secmore', false);
   $('matchout').innerHTML = '';
 }
+
+//: the critical values and reference point of each base, as last computed.
+//: A free path is drawn against them, so it needs them after the fact.
+const LAST = {pi: null, rho: null};
 
 $('fpi').addEventListener('submit', async ev => {
   ev.preventDefault();
   $('bpi').disabled = true; $('pibusy').classList.remove('hidden');
   $('piout').innerHTML = ''; $('rhoout').innerHTML = '';
+  clearExtras();
+  lock('secrho', 'compute \u03c0 first');
+  lock('secmatch', 'compute \u03c1 first');
+  lock('secmore', 'compute \u03c1 first');
   try {
     renderPi(await post(spec(false)));
   } catch (e) { showError($('piout'), e.message); }
@@ -363,7 +467,9 @@ $('frho').addEventListener('submit', async ev => {
   ev.preventDefault();
   $('brho').disabled = true; $('rhobusy').classList.remove('hidden');
   $('rhoout').innerHTML = ''; $('matchout').innerHTML = '';
-  $('fmatch').classList.add('hidden');
+  clearExtras();
+  lock('secmatch', 'compute \u03c1 first');
+  lock('secmore', 'compute \u03c1 first');
   try {
     renderRho(await post(spec(true)));
   } catch (e) { showError($('rhoout'), e.message); }
@@ -403,9 +509,38 @@ function untitled(fig){
 }
 
 function defaultWaypoints(item, marks, origin){
-  // the straight vanishing path this entry was computed with
-  const target = marks[item.target] || [0, 0];
+  // the straight vanishing path this entry was computed with; a free path has
+  // no target of its own, so it opens on the first critical value and is
+  // dragged from there
+  const target = marks[item.target] || marks[0] || [origin[0] + 1, origin[1]];
   return [[origin[0], origin[1]], [target[0], target[1]]];
+}
+
+// A free path is closed by starting and ending it at the same number:
+// `is_closed` asks for equality, and no amount of dragging would land on it.
+//
+// The loop is opened halfway along its first segment rather than at the base
+// point.  Only interior waypoints have corners to round, so closing at the
+// base point would be closing at the one vertex that could not then be
+// smoothed; halfway along a straight stretch there is no corner to lose, and
+// every vertex of the loop -- the base point included -- becomes interior.
+function pathWaypoints(ed){
+  if (!(ed.closed && ed.wp.length > 1)) return ed.wp;
+  const a = ed.wp[0], b = ed.wp[1];
+  const mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  return [mid].concat(ed.wp.slice(1), [a, mid]);
+}
+
+function pathRadii(ed){
+  if (!(ed.closed && ed.wp.length > 1)) return ed.radius;
+  return [0].concat(ed.radius.slice(1), [ed.radius[0], 0]);
+}
+
+// Every vertex of a closed loop is a corner of it; on an open path the two
+// ends are where the path stops, and there is nothing there to round.
+function roundable(ed, i){
+  return i >= 0 && (ed.closed ? ed.wp.length > 1
+                              : (i > 0 && i < ed.wp.length - 1));
 }
 
 function editorTraces(wp, marks, origin){
@@ -420,7 +555,7 @@ function editorTraces(wp, marks, origin){
     {x: [], y: [], mode: 'lines', line: {color: '#1f77b4', width: 2},
      name: 'path', hoverinfo: 'skip'},
     {x: wp.map(p => p[0]), y: wp.map(p => p[1]), mode: 'markers',
-     marker: cornerStyle(wp.length, -1),
+     marker: cornerStyle(wp.length, -1, false),
      name: 'corners', hovertemplate: '%{x:.4f} %{y:+.4f}i<extra></extra>'},
   ];
 }
@@ -428,10 +563,10 @@ function editorTraces(wp, marks, origin){
 // The ends of a vanishing path are the reference fibre and the critical value;
 // moving either would stop it being a vanishing path for that value, so they
 // are drawn as locked and refuse to be dragged or removed.
-function cornerStyle(n, sel){
+function cornerStyle(n, sel, free){
   const colour = [], size = [], symbol = [];
   for (let i = 0; i < n; i++){
-    const locked = (i === 0 || i === n - 1);
+    const locked = !free && (i === 0 || i === n - 1);
     colour.push(locked ? '#9aa0a6' : (i === sel ? '#ff7f0e' : '#1f77b4'));
     size.push(locked ? 9 : (i === sel ? 15 : 11));
     symbol.push(locked ? 'square' : 'circle');
@@ -439,7 +574,12 @@ function cornerStyle(n, sel){
   return {color: colour, size, symbol, line: {color: '#fff', width: 2}};
 }
 
-function isLocked(ed, i){ return i === 0 || i === ed.wp.length - 1; }
+// Only a vanishing path has fixed ends: they are the reference fibre and the
+// critical value, and moving either would stop it being one.  A free path is
+// free at both ends.
+function isLocked(ed, i){
+  return !ed.free && (i === 0 || i === ed.wp.length - 1);
+}
 
 const EDITOR_LAYOUT = {
   template: 'plotly_white', margin: {l: 44, r: 12, t: 10, b: 38},
@@ -486,7 +626,7 @@ function insertionIndex(wp, pt){
 
 function redrawPath(ed, preview){
   Plotly.restyle(ed.gd, {x: [ed.wp.map(p => p[0])], y: [ed.wp.map(p => p[1])],
-                         marker: [cornerStyle(ed.wp.length, ed.sel)]}, [3]);
+                         marker: [cornerStyle(ed.wp.length, ed.sel, ed.free)]}, [3]);
   if (preview !== false) refreshPreview(ed);
   showCornerControl(ed);
 }
@@ -498,19 +638,21 @@ async function refreshPreview(ed){
   try {
     const r = await fetch('/api/path', {method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({waypoints: ed.wp, steps: Number(ed.steps.value) || 70,
-                            rounding: ed.radius})}).then(x => x.json());
+      body: JSON.stringify({waypoints: pathWaypoints(ed),
+                            steps: Number(ed.steps.value) || 70,
+                            rounding: pathRadii(ed)})}).then(x => x.json());
     if (token !== ed.token || !r.ok) return;
     Plotly.restyle(ed.gd, {x: [r.path.map(p => p[0])], y: [r.path.map(p => p[1])]}, [2]);
   } catch (e) { /* preview only */ }
 }
 
 function showCornerControl(ed){
-  const on = ed.sel > 0 && ed.sel < ed.wp.length - 1;
+  const on = roundable(ed, ed.sel);
   ed.corner.classList.toggle('on', on);
   if (on){
     ed.round.value = ed.radius[ed.sel] || 0;
-    ed.selnote.textContent = 'corner ' + ed.sel;
+    ed.selnote.textContent = ed.closed && ed.sel === 0
+      ? 'base point' : 'corner ' + ed.sel;
   }
 }
 
@@ -524,6 +666,7 @@ function attachEditing(ed){
       ev.preventDefault(); ev.stopPropagation(); return;
     }
     if (ev.altKey || ev.ctrlKey || ev.metaKey){       // remove a corner
+      if (ed.wp.length <= 2){ ev.preventDefault(); ev.stopPropagation(); return; }
       ed.wp.splice(hit, 1); ed.radius.splice(hit, 1);
       if (ed.sel === hit) ed.sel = -1;
       else if (ed.sel > hit) ed.sel--;
@@ -561,9 +704,9 @@ async function recompute(key){
   try {
     const r = await fetch('/api/trace', {method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({spec: spec(true), waypoints: ed.wp,
+      body: JSON.stringify({spec: spec(true), waypoints: pathWaypoints(ed),
                             steps: Number(ed.steps.value) || 70,
-                            rounding: ed.radius, level: ed.level,
+                            rounding: pathRadii(ed), level: ed.level,
                             numeric: $('numeric').checked,
                             verify: $('verify').checked,
                             label: ed.label})}).then(x => x.json());
@@ -571,15 +714,18 @@ async function recompute(key){
     ed.out.innerHTML = '';
     plot(ed.out, untitled(r.figure), null);
   } catch (e){ showError(ed.out, e.message); }
-  finally { ed.button.disabled = false; ed.button.textContent = 'Recompute'; }
+  finally { ed.button.disabled = false; ed.button.textContent = ed.verb; }
 }
 
-function addPicker(host, v, marks, origin, level){
-  const key = level + v.target;
+function addPicker(host, v, marks, origin, level, opts){
+  opts = opts || {};
+  const free = !!opts.free;
+  const key = opts.key || (level + v.target);
+  const base = level === 'pi' ? '&pi;' : '&rho;';
   const box = document.createElement('div'); box.className = 'picker';
   box.innerHTML = `
     <div>
-      <h3>${esc(v.name)} &mdash; path in the base of ${level === 'pi' ? '&pi;' : '&rho;'}</h3>
+      <h3>${esc(v.name)} &mdash; path in the base of ${base}</h3>
       <div id="ed-${key}"></div>
       <div class="tools">
         <label>samples <input type="number" id="st-${key}" min="8" max="2000" value="70"></label>
@@ -587,11 +733,13 @@ function addPicker(host, v, marks, origin, level){
           <span class="selnote" id="sn-${key}"></span>
           <label>rounding <input type="range" id="rd-${key}" min="0" max="1" step="0.05" value="0"></label>
         </span>
-        <button id="go-${key}">Recompute</button>
+        ${free ? `<label><input type="checkbox" id="cl-${key}"> closed loop</label>` : ''}
+        <button id="go-${key}">${free ? 'Compute' : 'Recompute'}</button>
         <button class="ghost" id="rs-${key}">Reset</button>
+        ${free ? `<button class="ghost" id="rm-${key}">Remove</button>` : ''}
       </div>
       <p class="keys">shift-click to add a corner &middot; click one to select it, drag to move
-         &middot; alt-click to remove &middot; the ends are fixed</p>
+         &middot; alt-click to remove${free ? '' : ' &middot; the ends are fixed'}</p>
     </div>
     <div>
       <h3>${level === 'pi' ? 'matching path along it' : 'collisions along it'}</h3>
@@ -607,11 +755,16 @@ function addPicker(host, v, marks, origin, level){
   Plotly.newPlot(gd, edFig.data, edFig.layout,
                  {displaylogo: false, responsive: true});
   const out = $(`out-${key}`);
-  const shown = withOpeningView(untitled(v.figure), out);
-  Plotly.newPlot(out, shown.data, shown.layout,
-                 {displaylogo: false, responsive: true});
+  if (free)
+    out.innerHTML = '<p class="blank">Draw a path, then press Compute.</p>';
+  else {
+    const shown = withOpeningView(untitled(v.figure), out);
+    Plotly.newPlot(out, shown.data, shown.layout,
+                   {displaylogo: false, responsive: true});
+  }
 
   const ed = EDITORS[key] = {wp, gd, out, label: v.name, level, sel: -1, token: 0,
+    free, closed: false, verb: free ? 'Compute' : 'Recompute',
     radius: wp.map(() => 0),
     steps: $(`st-${key}`), round: $(`rd-${key}`), corner: $(`cn-${key}`),
     selnote: $(`sn-${key}`), button: $(`go-${key}`)};
@@ -619,7 +772,7 @@ function addPicker(host, v, marks, origin, level){
   redrawPath(ed);
   ed.button.addEventListener('click', () => recompute(key));
   ed.round.addEventListener('input', () => {
-    if (ed.sel > 0 && ed.sel < ed.wp.length - 1){
+    if (roundable(ed, ed.sel)){
       ed.radius[ed.sel] = Number(ed.round.value);
       refreshPreview(ed);
     }
@@ -630,7 +783,52 @@ function addPicker(host, v, marks, origin, level){
     ed.radius = ed.wp.map(() => 0); ed.sel = -1;
     redrawPath(ed);
   });
+  if (free){
+    $(`cl-${key}`).addEventListener('change', ev => {
+      ed.closed = ev.target.checked;
+      redrawPath(ed);          // closing the loop makes every vertex a corner
+    });
+    $(`rm-${key}`).addEventListener('click', () => {
+      delete EDITORS[key];
+      box.remove();
+      if (!$('freeout').querySelector('.picker')) freeBlank();
+    });
+  }
+  return ed;
 }
+
+// ---- free paths --------------------------------------------------------
+// Everything above traces a vanishing path: it starts at the reference fibre
+// and ends at a critical value.  These do not have to.  A closed loop reports
+// the monodromy it induces; anything else, the two branches nearest at its end.
+
+let freeCount = 0;
+
+function freeBlank(){
+  $('freeout').innerHTML =
+    '<p class="blank">No extra paths yet.</p>';
+}
+
+function clearExtras(){
+  for (const k of Object.keys(EDITORS)) if (EDITORS[k].free) delete EDITORS[k];
+  freeCount = 0;
+  freeBlank();
+}
+
+function addFreePath(level){
+  const src = LAST[level];
+  if (!src) return;
+  const host = $('freeout');
+  if (!host.querySelector('.picker')) host.innerHTML = '';
+  const key = 'free' + (++freeCount);
+  addPicker(host, {name: `free path ${freeCount}`}, src.values, src.origin,
+            level, {free: true, key});
+  $(`ed-${key}`).scrollIntoView({behavior: 'smooth', block: 'center'});
+}
+
+$('newpi').addEventListener('click', () => addFreePath('pi'));
+$('newrho').addEventListener('click', () => addFreePath('rho'));
+freeBlank();
 
 // Pre-fill from an example file. The server substitutes the preset into the
 // placeholder below, so there is nothing to wait for.
@@ -660,16 +858,28 @@ const PRESET = /*PRESET*/null;
   // Any edit means the file's own paths no longer apply.
   for (const id of ['domain','pi','pisolve','piorigin','rho','rhosolve','rhoorigin'])
     $(id).addEventListener('input', touched);
-  // Changing how the matching paths are computed does not change the surface,
-  // but what is already on screen was computed the other way; say so rather
-  // than leaving a stale answer looking current.
-  $('verify').addEventListener('change', touched);
-  $('numeric').addEventListener('change', () => {
-    touched();
-    if ($('rhoout').innerHTML)
-      $('rhoout').insertAdjacentHTML('afterbegin',
-        '<div class="err">The results below were computed the other way. '
-        + 'Press "Compute \u03c1" to redo them.</div>');
-  });
 })(PRESET);
+
+// Checking a path against an exact solve is checking the tracking, so there is
+// nothing for it to do until the tracking is asked for.
+function syncVerify(){
+  const on = $('numeric').checked;
+  $('verify').disabled = !on;
+  if (!on) $('verify').checked = false;
+  $('verifyopt').classList.toggle('off', !on);
+}
+$('numeric').addEventListener('change', syncVerify);
+syncVerify();
+
+// Neither flag changes the surface, so the paths a file declares still apply
+// and `touched` is not called -- but what is already drawn was computed the
+// other way, and should not be left looking current.
+for (const el of [$('numeric'), $('verify')])
+  el.addEventListener('change', () => {
+    const host = $('matchout');
+    if (host.innerHTML && !host.querySelector('.stale'))
+      host.insertAdjacentHTML('afterbegin',
+        '<div class="err stale">The paths below were computed the other way. '
+        + 'Press "Compute matching paths" to redo them.</div>');
+  });
 </script>
