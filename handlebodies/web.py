@@ -1,9 +1,8 @@
-"""Plotly rendering, for the archive and for 3-D.
+"""Plotly figures for the page.
 
-Figures written with include_plotlyjs='directory' share one copy of plotly.js
-sitting beside the pages, so each figure costs about 10 KB rather than
-embedding a 4 MB library.  The result pans, zooms and rotates offline with no
-kernel, which is what the notebooks needed Sage's threejs viewer for.
+Everything is returned as a figure dictionary for the browser to draw, so the
+plots pan, zoom and rotate with no kernel behind them -- which is what the
+notebooks needed Sage's threejs viewer for.
 """
 
 import math

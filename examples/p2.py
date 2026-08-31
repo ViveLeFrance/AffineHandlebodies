@@ -1,4 +1,4 @@
-from handlebodies import pl_path, run
+from handlebodies import run
 
 NAME = "Painlevé II"
 NOTES = "The surface is singular at a = -1, so a = -2 is chosen."

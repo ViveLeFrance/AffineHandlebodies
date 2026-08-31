@@ -1,4 +1,4 @@
-from handlebodies import pl_path, run
+from handlebodies import run
 
 NAME = "Painlevé IV"
 DOMAIN = ("x*y*z + x**2 - (s2**2 + s1*s2)*x - s2**2*y - s2**2*z "

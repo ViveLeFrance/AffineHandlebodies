@@ -1,4 +1,4 @@
-from handlebodies import circle, pl_path, run
+from handlebodies import circle, run
 
 NAME = "Painlevé I"
 DOMAIN = "x*y*z - x - y + 1"

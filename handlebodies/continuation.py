@@ -143,9 +143,6 @@ def seed(fibre, variables, coeffs, report=None):
     equations = [sp.expand(fibre), sp.expand(minor)]
     us = A.roots(A.eliminant(equations, [v], extra=u), prec=20)
 
-    t = sp.Symbol('_seed_t')
-    system = System(fibre, variables, coeffs, t)
-
     # Everything below is evaluated numerically: substituting into a degree-10
     # expression symbolically, once per candidate root, dominates the cost.
     coefficients = [sp.lambdify(u, c, 'numpy')
