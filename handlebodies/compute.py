@@ -63,6 +63,7 @@ def surface_and_pi(spec, paths=None):
         'tex': _tex_block(pi, r'\pi', study.variables, pi.fibre(pi.origin)),
         'n_values': len(cv),
         'n_points': pi.n_critical_points(),
+        'fibre_smooth': pi.fibre_is_smooth(),
         'genus': pi.fibre_genus(),
         'punctures': len(ranks),
         'origin_xy': [pi.origin_c.real, pi.origin_c.imag],
@@ -350,6 +351,30 @@ def sample_path(waypoints, steps=70, rounding=0.0, closed=False):
     return {'ok': True, 'path': [[float(p.real), float(p.imag)] for p in path]}
 
 
+def surface(spec):
+    """Whether the surface is smooth, and where it is not.
+
+    Wanted before pi has been settled -- the page asks as soon as the equation
+    is written -- so this deliberately touches nothing else.  A singular locus
+    that is not a finite set of points cannot be listed, and says so.
+    """
+    import sympy as sp
+    from . import algebra as A
+    variables = [sp.Symbol(s) for s in 'x y z'.split()]
+    domain = A.poly(spec['domain'], spec.get('params') or None)
+    points = A.singular_points(domain, variables)
+    listed, described = [], True
+    for point in points:
+        coords = [point.get(v, v) for v in variables]
+        if any(getattr(c, 'free_symbols', set()) for c in coords):
+            described = False           # a curve of singularities, not points
+            continue
+        listed.append('(' + ', '.join(str(c) for c in coords) + ')')
+    return {'ok': True, 'smooth': not points, 'listed': described,
+            'singularities': sorted(listed),
+            'variables': '(' + ', '.join(str(v) for v in variables) + ')'}
+
+
 def answer(path, body, paths=((), ())):
     """Route one of the page's API calls to the function behind it.
 
@@ -371,6 +396,8 @@ def answer(path, body, paths=((), ())):
                        numeric=bool(body.get('numeric', False)),
                        verify=bool(body.get('verify', False)),
                        closed=bool(body.get('closed', False)))
+    if path == '/api/surface':
+        return surface(body)
     if path == '/api/compute':
         # Only the untouched preset gets the file's own paths; once a field is
         # edited the spec no longer matches what those paths were written for.

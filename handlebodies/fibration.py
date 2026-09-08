@@ -190,6 +190,18 @@ class LinearFibration:
                 found.add(point)
         return sorted(found, key=str)
 
+    def fibre_is_smooth(self, value=None):
+        """Whether the fibre over `value` is a smooth curve.
+
+        Distinct from the surface being smooth: a smooth surface still has
+        singular fibres, one over each critical value, and that is the point
+        of the whole construction.  This says the reference fibre is not one
+        of them.
+        """
+        value = self.origin if value is None else value
+        return alg.singular_points(self.fibre(value),
+                                   self.other_variables()) == []
+
     def fibre_genus(self, value=None):
         """Genus of the fibre, from the interior of its Newton polygon."""
         value = self.origin if value is None else value

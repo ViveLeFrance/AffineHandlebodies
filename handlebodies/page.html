@@ -29,7 +29,13 @@ button{margin-top:.9rem;padding:.5rem 1.1rem;border:0;border-radius:6px;
        background:var(--accent);color:#fff;font-size:.92rem;font-weight:600;cursor:pointer}
 button:disabled{background:#9bb8cf;cursor:default}
 .hint{color:var(--muted);font-size:.82rem;margin:.5rem 0 0}
-.facts{display:flex;flex-wrap:wrap;gap:.4rem .5rem;margin:.9rem 0}
+.facts{display:flex;flex-wrap:wrap;gap:.4rem .5rem;margin:.9rem 0;align-items:center}
+.facts .lead{font-weight:600}
+.stat{grid-column:2;font-size:.85rem;color:var(--muted);min-height:1.15em}
+.stat.good{color:var(--good)}
+.stat.bad{color:var(--bad)}
+.stat code{font-size:.9em;background:#fff;border:1px solid var(--line);
+           border-radius:4px;padding:0 .25rem}
 .chip{border:1px solid var(--line);border-radius:999px;padding:.15rem .7rem;
       font-size:.85rem;background:#fff}
 .chip b{font-weight:600}
@@ -109,8 +115,8 @@ details.sec fieldset{border:0;background:var(--panel);padding:.9rem 1rem}
 </style>
 <main>
 <h1>Lefschetz bifibrations</h1>
-<p class="sub">Enter a surface and a fibration &pi;; then a fibration &rho; on its
-fibres. Every plot pans and zooms.</p>
+<p class="sub">Enter an equation for an affine surface and a <strong>linear</strong> fibration &pi;; then a linear fibration &rho; on its
+  fibres.</p>
 
 <details class="sec" id="secpi" open>
 <summary>Surface and &pi;</summary>
@@ -120,6 +126,7 @@ fibres. Every plot pans and zooms.</p>
   <div class="row">
     <label for="domain">Surface X</label><input id="domain" spellcheck="false" value="x*y*z - x - y + 1"
            placeholder="x*y*z - x - y + 1">
+    <div id="surfstat" class="stat"></div>
     <label>Parameters</label>
     <div><div id="params"></div>
       <button type="button" class="add" id="addparam">+ parameter</button></div>
@@ -250,6 +257,40 @@ function spec(withRho){
   return s;
 }
 
+// The surface stands on its own, so it is checked as soon as it has been
+// written rather than waiting for the button: a typo in the equation, or a
+// genuinely singular surface, is worth knowing before choosing a pi for it.
+let surfaceAsked = null;
+async function checkSurface(){
+  const asked = {domain: $('domain').value.trim(), params: readParams()};
+  const key = JSON.stringify(asked);
+  const box = $('surfstat');
+  if (!asked.domain){ box.className = 'stat'; box.textContent = '';
+                      surfaceAsked = null; return; }
+  if (key === surfaceAsked) return;
+  surfaceAsked = key;
+  box.className = 'stat'; box.textContent = 'checking\u2026';
+  try {
+    const r = await api('/api/surface', {method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(asked)}).then(x => x.json());
+    if (key !== surfaceAsked) return;          // a later edit has overtaken it
+    if (!r.ok){ box.className = 'stat bad'; box.textContent = r.error; return; }
+    box.className = 'stat ' + (r.smooth ? 'good' : 'bad');
+    if (r.smooth)
+      box.textContent = '\u2713 smooth';
+    else if (!r.listed)
+      box.textContent = '\u2717 singular along a curve, not at isolated points';
+    else
+      box.innerHTML = '\u2717 singular at ' + esc(r.variables) + ' = '
+        + r.singularities.map(q => `<code>${esc(q)}</code>`).join(', ');
+  } catch (e){
+    if (key !== surfaceAsked) return;
+    surfaceAsked = null;                       // let the same surface be retried
+    box.className = 'stat bad'; box.textContent = e.message;
+  }
+}
+
 let usePreset = false;   // true only for the automatic first run
 function touched(){ usePreset = false; }
 
@@ -317,11 +358,10 @@ function withOpeningView(fig, div){
 
 // There is nothing on these plots to select: no data points to gather, and a
 // path's corners are picked by clicking them directly.  So the box and lasso
-// come off the bar rather than being left there to be tried.  The cloud button
-// goes with them: it posts the figure to a third party, which is not something
-// a page that computes in front of you should offer.  Plotly has called that
-// one by both names across versions, and removing one that is not there costs
-// nothing.
+// come off the bar rather than being left there to be tried.
+// The cloud button posts the figure to a third party, which is not what a page
+// that computes in front of you should offer; plotly has called it both names
+// across versions, and removing one that is not there costs nothing.
 const PLOT_CONFIG = {displaylogo: false, responsive: true,
                      modeBarButtonsToRemove: ['select2d', 'lasso2d',
                                               'sendChartToCloud', 'sendDataToCloud']};
@@ -432,8 +472,10 @@ function showResult(host, figure, caption, perm, based){
   return div;
 }
 
-function chips(items){
-  return '<div class="facts">' + items.map(([k,v,bad]) =>
+function chips(items, lead){
+  return '<div class="facts">'
+    + (lead ? `<b class="lead">${esc(lead)}</b>` : '')
+    + items.map(([k,v,bad]) =>
     `<span class="chip${bad?' warn':''}">${esc(k)} <b>${esc(v)}</b></span>`).join('') + '</div>';
 }
 
@@ -457,14 +499,18 @@ function renderPi(r){
   const host = $('piout');
   if (r.pi && r.pi.error) { showError(host, r.pi.error); return false; }
   const p = r.pi;
+  // What belongs to pi stays above its equation; what belongs to the fibre
+  // goes below, where the equation of the fibre has just been written out.
+  // The surface's own smoothness is not here at all: it is answered under the
+  // field that defines it, which is where the question is asked.
   host.innerHTML =
     chips([['critical values', p.n_values],
-           ['critical points', p.n_points, p.n_points !== p.n_values],
-           ['genus', p.genus],
-           ['punctures', p.punctures],
-           ['ranks at infinity', '[' + p.ranks.join(', ') + ']'],
-           ['smooth', r.smooth === null ? '?' : (r.smooth ? 'yes' : 'no'), r.smooth === false]])
-    + `<div class="tex">$$${p.tex}$$</div>`;
+           ['critical points', p.n_points, p.n_points !== p.n_values]])
+    + `<div class="tex">$$${p.tex}$$</div>`
+    + chips([['smooth', p.fibre_smooth ? 'yes' : 'no', !p.fibre_smooth],
+             ['genus', p.genus],
+             ['punctures', p.punctures],
+             ['ranks at infinity', '[' + p.ranks.join(', ') + ']']], 'Fibre:');
   typeset(host);
   plot(host, p.figure, 'Critical values of pi, with the reference fibre in green.');
   LAST.pi = {values: p.values, origin: p.origin_xy};
@@ -557,6 +603,12 @@ $('frho').addEventListener('submit', async ev => {
   } catch (e) { showError($('rhoout'), e.message); }
   finally { $('brho').disabled = false; $('rhobusy').classList.add('hidden'); }
 });
+
+$('domain').addEventListener('blur', checkSurface);
+$('params').addEventListener('focusout', checkSurface);
+// The built page installs its back end in a script after this one, so the
+// opening check waits for the document rather than racing it.
+window.addEventListener('load', checkSurface);
 
 $('addparam').addEventListener('click', () => { addParam(); touched(); });
 
