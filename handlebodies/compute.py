@@ -63,6 +63,7 @@ def surface_and_pi(spec, paths=None):
         'tex': _tex_block(pi, r'\pi', study.variables, pi.fibre(pi.origin)),
         'n_values': len(cv),
         'n_points': pi.n_critical_points(),
+        'genus': pi.fibre_genus(),
         'punctures': len(ranks),
         'origin_xy': [pi.origin_c.real, pi.origin_c.imag],
         'ranks': [r for _, r in ranks],

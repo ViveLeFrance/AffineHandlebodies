@@ -118,13 +118,15 @@ fibres. Every plot pans and zooms.</p>
 <form id="fpi">
 <fieldset>
   <div class="row">
-    <label for="domain">Surface X</label><input id="domain" spellcheck="false">
+    <label for="domain">Surface X</label><input id="domain" spellcheck="false" value="x*y*z - x - y + 1"
+           placeholder="x*y*z - x - y + 1">
     <label>Parameters</label>
     <div><div id="params"></div>
       <button type="button" class="add" id="addparam">+ parameter</button></div>
-    <label for="pi">&pi;</label><input id="pi" spellcheck="false">
-    <label for="pisolve">eliminate</label><input id="pisolve" spellcheck="false" placeholder="z">
-    <label for="piorigin">origin of &pi;</label><input id="piorigin" spellcheck="false" placeholder="0">
+    <label for="pi">&pi;</label><input id="pi" spellcheck="false" value="2*x + y - z"
+           placeholder="2*x + y - z">
+    <label for="pisolve">eliminate</label><input id="pisolve" spellcheck="false" value="x" placeholder="x">
+    <label for="piorigin">origin of &pi;</label><input id="piorigin" spellcheck="false" value="0" placeholder="0">
   </div>
   <button type="submit" id="bpi">Compute &pi;</button>
   <p class="hint">Write powers as <code>**</code>, the imaginary unit as <code>I</code>.
@@ -142,9 +144,10 @@ fibres. Every plot pans and zooms.</p>
 <form id="frho">
 <fieldset>
   <div class="row">
-    <label for="rho">&rho;</label><input id="rho" spellcheck="false">
-    <label for="rhosolve">eliminate</label><input id="rhosolve" spellcheck="false">
-    <label for="rhoorigin">origin of &rho;</label><input id="rhoorigin" spellcheck="false" placeholder="0">
+    <label for="rho">&rho;</label><input id="rho" spellcheck="false" value="z - 3*y"
+           placeholder="z - 3*y">
+    <label for="rhosolve">eliminate</label><input id="rhosolve" spellcheck="false" value="y" placeholder="y">
+    <label for="rhoorigin">origin of &rho;</label><input id="rhoorigin" spellcheck="false" value="0" placeholder="0">
   </div>
   <button type="submit" id="brho">Compute &rho;</button>
   <p class="hint" id="rhohint"></p>
@@ -446,6 +449,7 @@ function renderPi(r){
   host.innerHTML =
     chips([['critical values', p.n_values],
            ['critical points', p.n_points, p.n_points !== p.n_values],
+           ['genus', p.genus],
            ['punctures', p.punctures],
            ['ranks at infinity', '[' + p.ranks.join(', ') + ']'],
            ['smooth', r.smooth === null ? '?' : (r.smooth ? 'yes' : 'no'), r.smooth === false]])

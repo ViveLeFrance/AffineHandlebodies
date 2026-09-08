@@ -7,6 +7,7 @@ float nearest to it.
 """
 
 import itertools
+import math
 import os
 import re
 
@@ -393,6 +394,49 @@ def homogenize(expr, variables, w):
     return sp.expand(sum(
         c * sp.prod([v ** e for v, e in zip(variables, mono)]) * w ** (d - sum(mono))
         for mono, c in zip(p.monoms(), p.coeffs())))
+
+
+def _turn(o, a, b):
+    """Twice the signed area of the triangle o, a, b."""
+    return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+
+def _hull(points):
+    """The convex hull of integer points, anticlockwise (Andrew's monotone chain)."""
+    pts = sorted(set(points))
+    if len(pts) < 3:
+        return pts
+    halves = []
+    for seq in (pts, pts[::-1]):
+        side = []
+        for p in seq:
+            while len(side) >= 2 and _turn(side[-2], side[-1], p) <= 0:
+                side.pop()
+            side.append(p)
+        halves.append(side[:-1])
+    return halves[0] + halves[1]
+
+
+def newton_genus(expr, variables):
+    """Lattice points strictly inside the Newton polygon of `expr`.
+
+    For a curve in the torus that count is its genus: the generic member of a
+    Newton polygon has geometric genus equal to the number of interior lattice
+    points.  So the genus of a fibre can be read off the exponents of its
+    equation, with nothing solved and no backend involved.
+
+    Counted through Pick's theorem, area = interior + boundary/2 - 1, which
+    keeps the whole computation in integers.
+    """
+    if len(variables) != 2:
+        raise ValueError("a Newton polygon needs a curve in two variables")
+    corners = _hull(sp.Poly(expr, *variables).monoms())
+    if len(corners) < 3:
+        return 0                        # a segment or a point bounds no area
+    edges = list(zip(corners, corners[1:] + corners[:1]))
+    twice_area = abs(sum(a[0] * b[1] - b[0] * a[1] for a, b in edges))
+    boundary = sum(math.gcd(abs(b[0] - a[0]), abs(b[1] - a[1])) for a, b in edges)
+    return (twice_area - boundary + 2) // 2
 
 
 def singular_points(G, variables):

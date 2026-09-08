@@ -190,6 +190,11 @@ class LinearFibration:
                 found.add(point)
         return sorted(found, key=str)
 
+    def fibre_genus(self, value=None):
+        """Genus of the fibre, from the interior of its Newton polygon."""
+        value = self.origin if value is None else value
+        return alg.newton_genus(self.fibre(value), self.other_variables())
+
     def transversality(self, value=None):
         """Rank of [grad Xbar ; grad pi ; dw] at each point at infinity.
 
