@@ -79,12 +79,15 @@ class Handler(BaseHTTPRequestHandler):
         except json.JSONDecodeError as exc:
             return self._send(400, json.dumps({'ok': False, 'error': str(exc)}),
                               'application/json')
+        # Serialising is inside the guard too: a result that cannot be encoded
+        # is still a failed request, not a traceback and a dropped connection.
         try:
             from .compute import answer
-            result = answer(self.path, body, PRESET_PATHS)
+            payload = json.dumps(answer(self.path, body, PRESET_PATHS))
         except Exception as exc:                      # never kill the server
-            result = {'ok': False, 'error': f'{type(exc).__name__}: {exc}'}
-        self._send(200, json.dumps(result), 'application/json')
+            payload = json.dumps({'ok': False,
+                                  'error': f'{type(exc).__name__}: {exc}'})
+        self._send(200, payload, 'application/json')
 
 
 def serve(preset=None, port=8765, open_browser=True, paths=((), ())):

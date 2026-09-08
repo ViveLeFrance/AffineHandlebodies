@@ -7,11 +7,33 @@ The pi half is computed alone when rho has not been filled in yet.
 
 import json
 
+import numpy as np
+
 from .study import Study, _slug
 
 
+def _plain(value):
+    """The same value with nothing in it that ``json.dumps`` would refuse."""
+    if isinstance(value, dict):
+        return {k: _plain(v) for k, v in value.items()}
+    if isinstance(value, np.ndarray):
+        return _plain(value.tolist())
+    if isinstance(value, (list, tuple)):
+        return [_plain(v) for v in value]
+    if isinstance(value, np.generic):
+        return value.item()
+    return value
+
+
 def _fig(f):
-    return f.to_plotly_json()
+    """A figure as plain JSON.
+
+    plotly encodes the arrays it recognises as base64 and hands back the rest
+    as numpy -- an empty one above all, which it has no binary form for.  A
+    fibration with no critical values draws exactly that, so the figure is
+    swept once on the way out rather than reaching json.dumps as it is.
+    """
+    return _plain(f.to_plotly_json())
 
 
 def _err(stage, exc):
