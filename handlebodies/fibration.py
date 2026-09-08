@@ -49,10 +49,23 @@ class LinearFibration:
         return alg.parallel_minors(self.domain, self.variables, self.coeffs) + [self.domain]
 
     def _eliminant(self):
-        """Univariate polynomial in W whose roots are the critical values."""
+        """Univariate polynomial in W whose roots are the critical values.
+
+        On a plane curve -- which is what a fibre is, and what the matching
+        paths ask about over and over -- the linear form can be substituted
+        away and the rest is a resultant.  The general route is kept for
+        everything else, and for the case that substitution does not fit.
+        """
         if 'eliminant' not in self._cache:
-            eqs = self.critical_system() + [sp.expand(self.expression - W)]
-            self._cache['eliminant'] = alg.eliminant(eqs, self.variables)
+            got = None
+            if len(self.variables) == 2:
+                minor, curve = self.critical_system()
+                got = alg.linear_eliminant(curve, minor, self.variables,
+                                           self.coeffs)
+            if got is None:
+                eqs = self.critical_system() + [sp.expand(self.expression - W)]
+                got = alg.eliminant(eqs, self.variables)
+            self._cache['eliminant'] = got
         return self._cache['eliminant']
 
     def critical_values(self, anticlockwise=True):
@@ -218,19 +231,27 @@ class Bifibration:
             # Eliminate the fibre coordinates, keeping W and the base point t.
             # This family is not zero-dimensional (t is free), so it needs a
             # genuine elimination rather than the shape-lemma route.
-            if alg.use_singular():
-                elim = alg.backend.eliminate(eqs, list(self.rho_vars) + [W, t],
-                                           self.rho_vars,
-                                           timeout=self.PARAMETRIC_TIMEOUT)
-                elim = [p for p in elim if p.free_symbols <= {W, t}]
-            else:
-                basis = sp.groebner(
-                    eqs, *self.rho_vars, W, t,
-                    order=alg.elimination_order(len(self.rho_vars)))
-                elim = [p for p in basis.exprs if p.free_symbols <= {W, t}]
-            if not elim:
-                raise ValueError("no eliminant in (W, t); check that rho is generic")
-            self._cache['param'] = (sp.Poly(elim[0], W), t)
+            # rho is linear in the fibre coordinates, so the whole family
+            # comes out of a single resultant; the general elimination is the
+            # fallback rather than the route.
+            minor = alg.parallel_minors(fibre_t, self.rho_vars, self.rho_coeffs)[0]
+            got = alg.linear_eliminant(fibre_t, minor, self.rho_vars,
+                                       self.rho_coeffs)
+            if got is None:
+                if alg.use_singular():
+                    elim = alg.backend.eliminate(eqs, list(self.rho_vars) + [W, t],
+                                               self.rho_vars,
+                                               timeout=self.PARAMETRIC_TIMEOUT)
+                    elim = [p for p in elim if p.free_symbols <= {W, t}]
+                else:
+                    basis = sp.groebner(
+                        eqs, *self.rho_vars, W, t,
+                        order=alg.elimination_order(len(self.rho_vars)))
+                    elim = [p for p in basis.exprs if p.free_symbols <= {W, t}]
+                if not elim:
+                    raise ValueError("no eliminant in (W, t); check that rho is generic")
+                got = sp.Poly(elim[0], W)
+            self._cache['param'] = (got, t)
         return self._cache['param']
 
     def critical_values_over(self, point):

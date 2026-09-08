@@ -106,6 +106,42 @@ def parallel_minors(G, variables, coeffs):
     return [m for m in minors if m != 0]
 
 
+def linear_eliminant(curve, minor, variables, coeffs, extra=W):
+    """Eliminate both fibre coordinates from a plane curve, by substitution.
+
+    A general elimination is wasted here.  The fibration is linear, so the
+    equation `c.v = extra` can be solved for one coordinate and substituted,
+    and what is left is two polynomials in the other coordinate alone --
+    whose resultant is the eliminant.  One Sylvester determinant, polynomial
+    in the degrees, where a Groebner basis is doubly exponential in the worst
+    case: on a quintic surface this is the difference between a tenth of a
+    second and a minute of Singular.
+
+    Returns None when the structure does not apply, so the caller can fall
+    back to the general route rather than be wrong.
+    """
+    u, v = variables
+    c_u, c_v = [sp.sympify(c) for c in coeffs]
+    if c_u == 0:
+        u, v, c_u, c_v = v, u, c_v, c_u
+    if c_u == 0:
+        return None                      # the form involves neither coordinate
+    substituted = []
+    for equation in (curve, minor):
+        e = sp.together(sp.expand(equation.subs(u, sp.together((extra - c_v * v) / c_u))))
+        substituted.append(sp.Poly(sp.numer(e), v))
+    if any(e.is_zero for e in substituted):
+        return None
+    res = sp.expand(sp.resultant(*substituted))
+    if res == 0:
+        # the two curves share a component, so the critical locus is a curve
+        raise PositiveDimensional(
+            "the critical locus is positive-dimensional, so there is no finite "
+            "set of critical values to compute; this normally means the surface "
+            "is singular along a curve contained in it")
+    return sp.Poly(res, extra)
+
+
 def elimination_order(n):
     """A block order eliminating the first `n` of the generators.
 
