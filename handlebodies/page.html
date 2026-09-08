@@ -315,6 +315,12 @@ function withOpeningView(fig, div){
   return {data: fig.data, layout};
 }
 
+// There is nothing on these plots to select: no data points to gather, and a
+// path's corners are picked by clicking them directly.  So the box and lasso
+// come off the bar rather than being left there to be tried.
+const PLOT_CONFIG = {displaylogo: false, responsive: true,
+                     modeBarButtonsToRemove: ['select2d', 'lasso2d']};
+
 function plot(host, figure, caption){
   const wrap = document.createElement('div'); wrap.className = 'fig';
   const div = document.createElement('div'); wrap.appendChild(div);
@@ -323,7 +329,7 @@ function plot(host, figure, caption){
   host.appendChild(wrap);
   const shown = withOpeningView(figure, div);
   Plotly.newPlot(div, shown.data, shown.layout,
-                 {displaylogo:false, responsive:true});
+                 PLOT_CONFIG);
   return div;
 }
 
@@ -852,14 +858,14 @@ function addPicker(host, v, marks, origin, level, opts){
     {data: editorTraces(wp, marks, origin),
      layout: Object.assign({meta: {equalScale: true}}, EDITOR_LAYOUT)}, gd);
   Plotly.newPlot(gd, edFig.data, edFig.layout,
-                 {displaylogo: false, responsive: true});
+                 PLOT_CONFIG);
   const out = $(`out-${key}`);
   if (free)
     out.innerHTML = '<p class="blank">Draw a path, then press Compute.</p>';
   else {
     const shown = withOpeningView(untitled(v.figure), out);
     Plotly.newPlot(out, shown.data, shown.layout,
-                   {displaylogo: false, responsive: true});
+                   PLOT_CONFIG);
     out.insertAdjacentHTML('beforeend', permTable(v.monodromy));
   }
 
