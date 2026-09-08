@@ -317,9 +317,14 @@ function withOpeningView(fig, div){
 
 // There is nothing on these plots to select: no data points to gather, and a
 // path's corners are picked by clicking them directly.  So the box and lasso
-// come off the bar rather than being left there to be tried.
+// come off the bar rather than being left there to be tried.  The cloud button
+// goes with them: it posts the figure to a third party, which is not something
+// a page that computes in front of you should offer.  Plotly has called that
+// one by both names across versions, and removing one that is not there costs
+// nothing.
 const PLOT_CONFIG = {displaylogo: false, responsive: true,
-                     modeBarButtonsToRemove: ['select2d', 'lasso2d']};
+                     modeBarButtonsToRemove: ['select2d', 'lasso2d',
+                                              'sendChartToCloud', 'sendDataToCloud']};
 
 function plot(host, figure, caption){
   const wrap = document.createElement('div'); wrap.className = 'fig';
