@@ -25,9 +25,7 @@ class PositiveDimensional(ValueError):
 def use_singular():
     """Whether to route Groebner work through the Singular binary.
 
-    Set HANDLEBODIES_NO_SINGULAR=1 to force the pure sympy path; the two agree
-    on every recorded example, and the fallback is what runs where Singular is
-    not installed.
+    Set HANDLEBODIES_NO_SINGULAR=1 to force the pure sympy path.
     """
     if os.environ.get('HANDLEBODIES_NO_SINGULAR'):
         return False
@@ -99,12 +97,10 @@ def parallel_minors(G, variables, coeffs):
     """Equations saying grad(G) is parallel to the constant vector `coeffs`.
 
     The critical points of a linear fibration with these coefficients, on the
-    hypersurface {G = 0}, are cut out by these 2x2 minors together with G.
-    Using minors rather than introducing a Lagrange multiplier keeps the ideal
-    free of the auxiliary variable, which is what makes elimination cheap.
+    hypersurface {G = 0}, are cut out by these 2x2 minors together with G. The minors are those appearing in the cross product grad pi x grad G.
     """
-    grad = [sp.diff(G, v) for v in variables]
-    minors = [sp.expand(grad[i] * coeffs[j] - grad[j] * coeffs[i])
+    gradG = [sp.diff(G, v) for v in variables]
+    minors = [sp.expand(gradG[i] * coeffs[j] - gradG[j] * coeffs[i])
               for i, j in itertools.combinations(range(len(variables)), 2)]
     return [m for m in minors if m != 0]
 
@@ -117,9 +113,7 @@ def eliminant(equations, variables, extra=W):
     """
     order = list(variables) + [extra]
 
-    # Check zero-dimensionality first: elimination does not terminate on a
-    # positive-dimensional ideal, and this check is cheap in either backend, so
-    # it turns an unbounded hang into an immediate answer.
+    # Check zero-dimensionality first
     if quotient_dimension(equations, order) is None:
         raise PositiveDimensional(
             "the critical locus is positive-dimensional, so there is no finite "
@@ -176,8 +170,7 @@ def exact_point(value, digits=9):
 
     Path points arrive as floats, so there is no exactness to preserve, and the
     denominator this produces goes straight into the coefficients an exact
-    solver has to carry.  Nine digits costs about a third less than twelve on a
-    degree-14 fibre and moves the answer by around 1e-10.
+    solver has to carry. 
     """
     c = complex(value)
     return (sp.Rational(str(round(c.real, digits)))

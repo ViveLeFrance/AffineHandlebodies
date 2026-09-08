@@ -3,7 +3,7 @@
 import numpy as np
 import sympy as sp
 
-from . import algebra as A
+from . import algebra as alg
 from .algebra import W
 
 
@@ -11,8 +11,7 @@ def sort_by_angle(points, origin=0, anticlockwise=True):
     """Order points by argument about `origin`, starting from the negative real axis.
 
     The resulting index is what the paper cites when it names a vanishing
-    cycle, so this convention is deliberately identical to the original
-    implementation and must not be changed casually.
+    cycle.
     """
     pts = [complex(p) for p in points]
     pts.sort(key=lambda p: (-np.pi + np.angle(p - origin)) % (2 * np.pi))
@@ -27,8 +26,8 @@ class LinearFibration:
     def __init__(self, domain, variables, expression, origin=0, solvefor=None):
         self.variables = list(variables)
         self.domain = sp.expand(domain)
-        self.coeffs = A.linear_coeffs(expression, self.variables)
-        self.origin = A.exact(origin)
+        self.coeffs = alg.linear_coeffs(expression, self.variables)
+        self.origin = alg.exact(origin)
         self.solvefor = self._as_symbol(solvefor) if solvefor else self.variables[0]
         self._cache = {}
 
@@ -47,23 +46,23 @@ class LinearFibration:
     # -- critical locus ---------------------------------------------------
 
     def critical_system(self):
-        return A.parallel_minors(self.domain, self.variables, self.coeffs) + [self.domain]
+        return alg.parallel_minors(self.domain, self.variables, self.coeffs) + [self.domain]
 
     def _eliminant(self):
         """Univariate polynomial in W whose roots are the critical values."""
         if 'eliminant' not in self._cache:
             eqs = self.critical_system() + [sp.expand(self.expression - W)]
-            self._cache['eliminant'] = A.eliminant(eqs, self.variables)
+            self._cache['eliminant'] = alg.eliminant(eqs, self.variables)
         return self._cache['eliminant']
 
     def critical_values(self, anticlockwise=True):
         """Critical values, ordered and labelled by `sort_by_angle`."""
-        return sort_by_angle(A.roots(self._eliminant()), self.origin_c,
+        return sort_by_angle(alg.roots(self._eliminant()), self.origin_c,
                              anticlockwise)
 
     def n_critical_points(self):
         """Number of critical points counted with multiplicity (exact)."""
-        return A.quotient_dimension(self.critical_system(), self.variables)
+        return alg.quotient_dimension(self.critical_system(), self.variables)
 
 
     # -- fibres -----------------------------------------------------------
@@ -71,7 +70,7 @@ class LinearFibration:
     def fibre(self, value, solvefor=None):
         """The fibre over `value`, as a polynomial in the remaining variables."""
         s = self._as_symbol(solvefor) if solvefor else self.solvefor
-        value = value if isinstance(value, sp.Expr) else A.exact(value)
+        value = value if isinstance(value, sp.Expr) else alg.exact(value)
         i = self.variables.index(s)
         if self.coeffs[i] == 0:
             raise ValueError(f"cannot eliminate {s}: its coefficient is zero")
@@ -120,8 +119,8 @@ class LinearFibration:
         value = self.origin if value is None else value
         w = sp.Symbol('w')
         V = self.variables
-        dom_h = A.homogenize(self.domain, V, w)
-        fib_h = A.homogenize(sp.expand(self.expression - A.exact(value)), V, w)
+        dom_h = alg.homogenize(self.domain, V, w)
+        fib_h = alg.homogenize(sp.expand(self.expression - alg.exact(value)), V, w)
 
         found = set()
         for k, v in enumerate(V):
@@ -154,8 +153,8 @@ class LinearFibration:
         w = sp.Symbol('w')
         V = self.variables
         coords = V + [w]
-        dom_h = A.homogenize(self.domain, V, w)
-        fib_h = A.homogenize(sp.expand(self.expression - A.exact(value)), V, w)
+        dom_h = alg.homogenize(self.domain, V, w)
+        fib_h = alg.homogenize(sp.expand(self.expression - alg.exact(value)), V, w)
         grad_dom = [sp.diff(dom_h, c) for c in coords]
         grad_fib = [sp.diff(fib_h, c) for c in coords]
 
@@ -182,8 +181,8 @@ class Bifibration:
     def __init__(self, pi, rho_expression, rho_origin=0, rho_solvefor=None):
         self.pi = pi
         self.rho_vars_all = pi.other_variables()
-        self.rho_coeffs = A.linear_coeffs(rho_expression, self.rho_vars_all)
-        self.rho_origin = A.exact(rho_origin)
+        self.rho_coeffs = alg.linear_coeffs(rho_expression, self.rho_vars_all)
+        self.rho_origin = alg.exact(rho_origin)
         self.rho_vars = self.rho_vars_all
         self.rho_solvefor = (pi._as_symbol(rho_solvefor) if rho_solvefor
                              else self.rho_vars[0])
@@ -213,14 +212,14 @@ class Bifibration:
         if 'param' not in self._cache:
             t = sp.Symbol('t')
             fibre_t = self.pi.fibre(t)
-            eqs = (A.parallel_minors(fibre_t, self.rho_vars, self.rho_coeffs)
+            eqs = (alg.parallel_minors(fibre_t, self.rho_vars, self.rho_coeffs)
                    + [fibre_t,
                       sp.expand(sum(c * v for c, v in zip(self.rho_coeffs, self.rho_vars)) - W)])
             # Eliminate the fibre coordinates, keeping W and the base point t.
             # This family is not zero-dimensional (t is free), so it needs a
             # genuine elimination rather than the shape-lemma route.
-            if A.use_singular():
-                elim = A.backend.eliminate(eqs, list(self.rho_vars) + [W, t],
+            if alg.use_singular():
+                elim = alg.backend.eliminate(eqs, list(self.rho_vars) + [W, t],
                                            self.rho_vars,
                                            timeout=self.PARAMETRIC_TIMEOUT)
                 elim = [p for p in elim if p.free_symbols <= {W, t}]
@@ -234,11 +233,11 @@ class Bifibration:
 
     def critical_values_over(self, point):
         """Critical values of rho on the single fibre of pi over `point`."""
-        fibre = sp.expand(self.pi.fibre(A.exact_point(point)))
+        fibre = sp.expand(self.pi.fibre(alg.exact_point(point)))
         expression = sum(c * v for c, v in zip(self.rho_coeffs, self.rho_vars))
         rho = LinearFibration(fibre, self.rho_vars, expression,
                               solvefor=self.rho_solvefor)
-        return A.roots(rho._eliminant(), prec=16)
+        return alg.roots(rho._eliminant(), prec=16)
 
     def _frames(self, path):
         """The critical values of rho over each point of `path`.
@@ -255,7 +254,7 @@ class Bifibration:
         except Exception:
             self._cache['per_step'] = True
             return [self.critical_values_over(s) for s in path]
-        at = A.numeric_root_fn(p, t)
+        at = alg.numeric_root_fn(p, t)
         return [at(s) for s in path]
 
     def tracked_frames(self, path, endgame=1e-4, verify=False):
@@ -288,10 +287,10 @@ class Bifibration:
         # Every default vanishing path leaves from pi's reference fibre, so the
         # exact solve that starts them is worth keeping.
         seeds = self._cache.setdefault('seeds', {})
-        key = repr(A.exact_point(path[0]))
+        key = repr(alg.exact_point(path[0]))
         if key not in seeds:
             note = {}
-            seeds[key] = (K.seed(self.pi.fibre(A.exact_point(path[0])),
+            seeds[key] = (K.seed(self.pi.fibre(alg.exact_point(path[0])),
                                  self.rho_vars, self.rho_coeffs, note), note)
         start, seed_note = seeds[key]
 
