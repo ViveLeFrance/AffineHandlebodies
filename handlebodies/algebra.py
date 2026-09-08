@@ -117,6 +117,15 @@ def linear_eliminant(curve, minor, variables, coeffs, extra=W):
     case: on a quintic surface this is the difference between a tenth of a
     second and a minute of Singular.
 
+    The substitution is not itself the saving, and it is worth not being
+    misled about that: handing the substituted pair to a Groebner engine is no
+    better than the original system and measurably worse for Singular, which
+    was happy to use the linear generator itself and would rather not be given
+    a denser one with the denominator cleared.  What the substitution buys is
+    the shape -- two polynomials in one unknown -- in which elimination stops
+    being a basis computation and becomes a determinant.  So callers falling
+    back should hand over the original system, not the substituted one.
+
     Returns None when the structure does not apply, so the caller can fall
     back to the general route rather than be wrong.
     """
