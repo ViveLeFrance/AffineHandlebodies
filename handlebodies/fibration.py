@@ -263,11 +263,13 @@ class Bifibration:
         Where the parametric eliminant is out of reach this is the difference
         between a tenth of a second and a couple of minutes, but it is opt-in:
         it follows solutions rather than solving afresh, so it can in principle
-        step from one onto another, and the exact routes cannot.  The last
-        point is solved exactly rather than tracked -- a vanishing path ends
-        where two solutions meet, which is where following them is least
-        reliable and where the answer matters most -- and that solve doubles as
-        a check on everything before it.
+        step from one onto another, and the exact routes cannot.
+
+        The tracking always stops just short of the endpoint, because a
+        vanishing path ends where two solutions meet and that is where
+        following them is least reliable.  What happens there is `verify`'s to
+        decide: left alone, the last frame stays where the tracking reached, so
+        the collision is reported a shade wider than it is.
 
         `endgame` is how far short of the endpoint the tracking stops, as a
         fraction of the final step.  `verify` solves the endpoint exactly and
