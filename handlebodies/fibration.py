@@ -224,7 +224,9 @@ class Bifibration:
                                            timeout=self.PARAMETRIC_TIMEOUT)
                 elim = [p for p in elim if p.free_symbols <= {W, t}]
             else:
-                basis = sp.groebner(eqs, *self.rho_vars, W, t, order='lex')
+                basis = sp.groebner(
+                    eqs, *self.rho_vars, W, t,
+                    order=alg.elimination_order(len(self.rho_vars)))
                 elim = [p for p in basis.exprs if p.free_symbols <= {W, t}]
             if not elim:
                 raise ValueError("no eliminant in (W, t); check that rho is generic")

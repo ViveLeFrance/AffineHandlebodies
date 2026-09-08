@@ -12,6 +12,7 @@ import re
 
 import numpy as np
 import sympy as sp
+from sympy.polys.orderings import ProductOrder, grevlex
 
 from . import singular as backend
 
@@ -105,6 +106,20 @@ def parallel_minors(G, variables, coeffs):
     return [m for m in minors if m != 0]
 
 
+def elimination_order(n):
+    """A block order eliminating the first `n` of the generators.
+
+    Elimination is what a lex basis is usually reached for, but lex builds a
+    full triangular form -- far more than an elimination ideal needs, and
+    ruinously more once the system is not small.  A block order asks only for
+    what the elimination theorem uses: that a monomial touching an eliminated
+    variable outranks every monomial in the kept ones.  It is how Singular's
+    own `eliminate` works, and it is the difference on a quartic surface
+    between twenty seconds and a lex basis that does not finish.
+    """
+    return ProductOrder((grevlex, lambda m: m[:n]), (grevlex, lambda m: m[n:]))
+
+
 def eliminant(equations, variables, extra=W):
     """Eliminate `variables`, leaving a univariate polynomial in `extra`.
 
@@ -123,7 +138,8 @@ def eliminant(equations, variables, extra=W):
     if use_singular():
         polys = backend.eliminate(equations, order, variables)
     else:
-        polys = list(sp.groebner(equations, *order, order='lex').exprs)
+        polys = list(sp.groebner(equations, *order,
+                                 order=elimination_order(len(variables))).exprs)
 
     univariate = [p for p in polys if p.free_symbols <= {extra}]
     if not univariate:
