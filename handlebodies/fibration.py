@@ -70,12 +70,47 @@ class LinearFibration:
 
     def critical_values(self, anticlockwise=True):
         """Critical values, ordered and labelled by `sort_by_angle`."""
-        return sort_by_angle(alg.roots(self._eliminant()), self.origin_c,
-                             anticlockwise)
+        return sort_by_angle(self._values(), self.origin_c, anticlockwise)
+
+    def _values(self):
+        """The critical values, by whichever route can supply them."""
+        if 'values' not in self._cache:
+            got = None
+            if len(self.variables) == 3 and not alg.use_singular():
+                got = self._values_by_fibre()
+            self._cache['values'] = (alg.roots(self._eliminant())
+                                     if got is None else got)
+        return self._cache['values']
+
+    def _values_by_fibre(self):
+        """Critical values as the values whose fibre is singular, or None.
+
+        Eliminating from a surface is the slowest thing here when Singular is
+        absent, and asking instead which fibres are singular replaces it with
+        resultants -- on a quartic, three seconds against twenty.  Singular is
+        far better than either, so this is only for its absence.
+
+        That route screens numerically, and its first failure was to drop a
+        value rather than to invent one, so it is believed only when it finds
+        as many values as there are critical points.  The count is exact and
+        cheap, and the page asks for it anyway.  A surface with two critical
+        points over one value fails that test honestly, and falls back.
+        """
+        try:
+            values = alg.singular_fibre_values(self.fibre(W),
+                                               self.other_variables())
+        except alg.PositiveDimensional:
+            raise                        # a real answer about the surface
+        except Exception:
+            return None                  # not a shape this route can take
+        return values if len(values) == self.n_critical_points() else None
 
     def n_critical_points(self):
         """Number of critical points counted with multiplicity (exact)."""
-        return alg.quotient_dimension(self.critical_system(), self.variables)
+        if 'points' not in self._cache:
+            self._cache['points'] = alg.quotient_dimension(
+                self.critical_system(), self.variables)
+        return self._cache['points']
 
 
     # -- fibres -----------------------------------------------------------

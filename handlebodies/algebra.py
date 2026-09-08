@@ -151,6 +151,142 @@ def linear_eliminant(curve, minor, variables, coeffs, extra=W):
     return sp.Poly(res, extra)
 
 
+def _closest_pair(values):
+    """The two nearest entries, as indices, or None if there are fewer than two."""
+    if len(values) < 2:
+        return None
+    pairs = ((abs(values[i] - values[j]), i, j)
+             for i in range(len(values)) for j in range(i + 1, len(values)))
+    _, i, j = min(pairs)
+    return i, j
+
+
+def _magnitude(expr, variables):
+    """A polynomial bounding `expr` term by term, for a scale-free residual.
+
+    Whether a number counts as zero here cannot be decided against 1: the
+    coefficients of a fibre run over many orders of magnitude.  Evaluating
+    this at the absolute values of the point gives what the terms of `expr`
+    could sum to there, and a residual is believed only if it is small
+    against that.
+    """
+    p = sp.Poly(expr, *variables)
+    return sum(abs(c) * sp.prod([v ** e for v, e in zip(variables, monomial)])
+               for monomial, c in zip(p.monoms(), p.coeffs()))
+
+
+def _polish(system, jacobian, point, w, steps=25):
+    """Newton on {curve = 0, d curve/dv = 0}, which is square in (u, v).
+
+    The candidate arrives as the midpoint of two roots that nearly collided,
+    which is only as accurate as the gap between them -- and at a double root
+    that gap is the square root of machine epsilon.  Newton on the pair of
+    equations the point is meant to satisfy recovers the accuracy that the
+    third equation is then tested against.
+    """
+    p = np.array(point, complex)
+    for _ in range(steps):
+        f = np.array(system(p[0], p[1], w), complex)
+        j = np.array(jacobian(p[0], p[1], w), complex)
+        try:
+            step = np.linalg.solve(j, f)
+        except np.linalg.LinAlgError:
+            break                       # singular Jacobian: as far as it goes
+        p = p - step
+        if not np.all(np.isfinite(p)):
+            return None
+        if abs(step).max() <= 1e-14 * max(1.0, abs(p).max()):
+            break
+    return p
+
+
+def _fibre_is_singular(parts, w, tol):
+    """Whether the curve over `w` really does have a singular point.
+
+    `parts` carries the compiled pieces.  The candidates for a singular point
+    are where the curve has a repeated root in v; each is polished onto the
+    curve and its v-derivative, and is a singular point exactly when the
+    u-derivative vanishes there as well.
+    """
+    for u_value in np.roots(parts['repeated'](w)):
+        vs = np.roots(parts['curve_in_v'](u_value, w))
+        pair = _closest_pair(vs)
+        if pair is None:
+            continue
+        start = (u_value, (vs[pair[0]] + vs[pair[1]]) / 2)
+        point = _polish(parts['system'], parts['jacobian'], start, w)
+        if point is None:
+            continue
+        u_p, v_p = point
+        residual = abs(parts['slope_u'](u_p, v_p, w))
+        scale = parts['scale_u'](abs(u_p), abs(v_p), abs(w))
+        # the point has to sit on the curve too, or Newton wandered off
+        on_curve = abs(parts['curve'](u_p, v_p, w))
+        curve_scale = parts['scale_c'](abs(u_p), abs(v_p), abs(w))
+        if (residual <= tol * max(abs(scale), 1e-300)
+                and on_curve <= tol * max(abs(curve_scale), 1e-300)):
+            return True
+    return False
+
+
+def singular_fibre_values(curve, variables, extra=W, tol=1e-6):
+    """Values of `extra` whose fibre of the plane curve family is singular.
+
+    A linear fibration takes a critical value exactly where its fibre is a
+    singular curve, so this answers the same question `eliminant` does, for a
+    surface, without a Groebner basis: the fibre is singular where the curve
+    and both its partials vanish together, and those coordinates come out in
+    resultants.
+
+    Three equations in two unknowns is one more than a resultant eliminates,
+    so it is done in two stages.  That is not an equivalence -- iterated
+    resultants pick up values that satisfy the stages without satisfying the
+    system, and the stages meet at each genuine point twice over -- so the
+    squarefree part is taken and nothing is believed until the curve over it
+    has been found genuinely singular.
+    """
+    u, v = variables
+    c = sp.expand(curve)
+    slopes = [sp.diff(c, u), sp.diff(c, v)]
+    in_v = [sp.Poly(e, v) for e in [c] + slopes]
+    if any(e.is_zero for e in in_v):
+        raise PositiveDimensional(
+            "the fibres are singular identically, so there is no finite set of "
+            "critical values; the surface is probably singular along a curve")
+    stages = [sp.resultant(in_v[0], in_v[i]) for i in (1, 2)]
+    if any(r == 0 for r in stages):
+        raise PositiveDimensional(
+            "a whole family of fibres is singular, so the critical values are "
+            "not finite; check that the fibration is generic")
+    together = sp.expand(sp.resultant(sp.Poly(stages[0], u), sp.Poly(stages[1], u)))
+    if together == 0:
+        raise PositiveDimensional(
+            "the two eliminations share a component, so the critical values "
+            "are not finite; check that the fibration is generic")
+
+    # The stages meet at each singular point twice over, so the eliminant comes
+    # back squared; the squarefree part removes that exactly, rather than
+    # leaving near-equal roots to be told apart numerically.
+    candidates = roots(sp.Poly(together, extra).sqf_part())
+
+    args = (u, v, extra)
+    magnitudes = (u, v, extra)
+    parts = {
+        'repeated': sp.lambdify(extra, sp.Poly(stages[1], u).all_coeffs(), 'numpy'),
+        'curve_in_v': sp.lambdify((u, extra), sp.Poly(c, v).all_coeffs(), 'numpy'),
+        'curve': sp.lambdify(args, c, 'numpy'),
+        'slope_u': sp.lambdify(args, slopes[0], 'numpy'),
+        'system': sp.lambdify(args, [c, slopes[1]], 'numpy'),
+        'jacobian': sp.lambdify(args, [[slopes[0], slopes[1]],
+                                       [sp.diff(slopes[1], u),
+                                        sp.diff(slopes[1], v)]], 'numpy'),
+        'scale_u': sp.lambdify(magnitudes, _magnitude(slopes[0], args), 'numpy'),
+        'scale_c': sp.lambdify(magnitudes, _magnitude(c, args), 'numpy'),
+    }
+    kept = [w for w in candidates if _fibre_is_singular(parts, w, tol)]
+    return np.array(kept, complex)
+
+
 def elimination_order(n):
     """A block order eliminating the first `n` of the generators.
 
