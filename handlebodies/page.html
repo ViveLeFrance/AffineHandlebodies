@@ -31,6 +31,13 @@ button:disabled{background:#9bb8cf;cursor:default}
 .hint{color:var(--muted);font-size:.82rem;margin:.5rem 0 0}
 .facts{display:flex;flex-wrap:wrap;gap:.4rem .5rem;margin:.9rem 0;align-items:center}
 .facts .lead{font-weight:600}
+.trees{margin:.2rem 0 1rem}
+.trees summary{cursor:pointer;color:var(--muted);font-size:.85rem}
+.trees summary:hover{color:var(--fg)}
+.treegrid{display:flex;flex-wrap:wrap;gap:.5rem;margin:.6rem 0 0}
+.treegrid svg{border:1px solid var(--line);border-radius:6px;background:#fff}
+.treegrid line{stroke:var(--accent);stroke-width:1.6;stroke-linecap:round}
+.treegrid circle{fill:var(--accent)}
 .stat{grid-column:2;font-size:.85rem;color:var(--muted);min-height:1.15em}
 .stat.good{color:var(--good)}
 .stat.bad{color:var(--bad)}
@@ -479,6 +486,80 @@ function chips(items, lead){
     `<span class="chip${bad?' warn':''}">${esc(k)} <b>${esc(v)}</b></span>`).join('') + '</div>';
 }
 
+// A tree drawn the obvious way: rooted at its centre, depth downwards, and
+// leaves given consecutive slots so a parent sits over its children.
+function treeSvg(edges, n){
+  const adj = Array.from({length: n}, () => []);
+  for (const [a, b] of edges){ adj[a].push(b); adj[b].push(a); }
+  const deg = adj.map(a => a.length);
+  const gone = new Set();
+  let left = n, layer = [...Array(n).keys()].filter(v => deg[v] <= 1);
+  while (left > 2){
+    const next = [];
+    for (const v of layer){
+      gone.add(v); left--;
+      for (const w of adj[v]) if (!gone.has(w) && --deg[w] === 1) next.push(w);
+    }
+    layer = next;
+  }
+  const root = [...Array(n).keys()].find(v => !gone.has(v)) || 0;
+
+  const depth = new Array(n).fill(0), parent = new Array(n).fill(-1);
+  const seen = new Array(n).fill(false), order = [root];
+  seen[root] = true;
+  for (let i = 0; i < order.length; i++){
+    const v = order[i];
+    for (const w of adj[v]) if (!seen[w]){
+      seen[w] = true; parent[w] = v; depth[w] = depth[v] + 1; order.push(w);
+    }
+  }
+  // leaves take consecutive slots in depth-first order; a parent sits at the
+  // midpoint of its children
+  const x = new Array(n).fill(0);
+  let slot = 0;
+  (function walk(v){
+    const kids = adj[v].filter(w => w !== parent[v]);
+    if (!kids.length){ x[v] = slot++; return; }
+    kids.forEach(walk);
+    x[v] = (x[kids[0]] + x[kids[kids.length - 1]]) / 2;
+  })(root);
+
+  const step = 24, pad = 11;
+  const w = Math.max(...x) * step + 2 * pad, h = Math.max(...depth) * step + 2 * pad;
+  const px = v => (pad + x[v] * step).toFixed(1);
+  const py = v => (pad + depth[v] * step).toFixed(1);
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">`
+    + edges.map(([a, b]) =>
+        `<line x1="${px(a)}" y1="${py(a)}" x2="${px(b)}" y2="${py(b)}"/>`).join('')
+    + [...Array(n).keys()].map(v =>
+        `<circle cx="${px(v)}" cy="${py(v)}" r="3.4"/>`).join('')
+    + '</svg>';
+}
+
+function plumbingTrees(pl){
+  if (!pl) return '';
+  const n = pl.vertices;
+  if (!pl.listed)
+    return '<details class="trees">'
+      + '<summary>plumbing trees (too many to list)</summary>'
+      + `<p class="hint">This fibre is a plumbing of ${n} cylinders, but the
+         trees on ${n} vertices are more than are worth enumerating here. The
+         limit is the listing's, not the fibre's.</p></details>`;
+  if (!pl.trees.length)
+    return '<details class="trees"><summary>plumbing trees</summary>'
+      + '<p class="hint">No tree of cylinders gives this fibre. Genus zero'
+      + ' needs a graph with a cycle, and the disc is not a plumbing at all.'
+      + '</p></details>';
+  const k = pl.trees.length;
+  return '<details class="trees">'
+    + `<summary>${k === 1 ? 'one plumbing tree' : k + ' plumbing trees'}</summary>`
+    + `<p class="hint">Plumbing ${n} cylinders along any of these gives this
+       fibre. A skeleton is a choice, not an invariant, so where there is more
+       than one they all present the same surface.</p>`
+    + '<div class="treegrid">'
+    + pl.trees.map(e => treeSvg(e, n)).join('') + '</div></details>';
+}
+
 function showError(host, msg){
   host.innerHTML = `<div class="err">${esc(msg)}</div>`;
 }
@@ -510,7 +591,8 @@ function renderPi(r){
     + chips([['smooth', p.fibre_smooth ? 'yes' : 'no', !p.fibre_smooth],
              ['genus', p.genus],
              ['punctures', p.punctures],
-             ['ranks at infinity', '[' + p.ranks.join(', ') + ']']], 'Fibre:');
+             ['ranks at infinity', '[' + p.ranks.join(', ') + ']']], 'Fibre:')
+    + plumbingTrees(p.plumbings);
   typeset(host);
   plot(host, p.figure, 'Critical values of pi, with the reference fibre in green.');
   LAST.pi = {values: p.values, origin: p.origin_xy};

@@ -9,6 +9,7 @@ import json
 
 import numpy as np
 
+from . import plumbing
 from .study import Study, _slug
 
 
@@ -88,6 +89,9 @@ def surface_and_pi(spec, paths=None):
         'fibre_smooth': pi.fibre_is_smooth(),
         'genus': pi.fibre_genus(),
         'punctures': len(ranks),
+        # Every tree realising the fibre, not one: a skeleton is a choice, and
+        # in dimension two they all present the same Liouville surface.
+        'plumbings': plumbing.realising(pi.fibre_genus(), len(ranks)),
         'origin_xy': [pi.origin_c.real, pi.origin_c.imag],
         'ranks': [r for _, r in ranks],
         'values': [[v.real, v.imag] for v in cv],
