@@ -1,4 +1,4 @@
-"""A small local page for working a surface interactively.
+"""A local page for working a surface interactively.
 
 The algebra stays in Python -- Groebner bases over QQ are not something to
 reimplement in a browser -- so the page posts a specification and gets back
@@ -79,29 +79,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(400, json.dumps({'ok': False, 'error': str(exc)}),
                               'application/json')
         try:
-            if self.path == '/api/path':
-                from .compute import sample_path
-                result = sample_path(body['waypoints'],
-                                     steps=body.get('steps', 70),
-                                     rounding=body.get('rounding', 0.0),
-                                     closed=bool(body.get('closed', False)))
-            elif self.path == '/api/trace':
-                from .compute import retrace
-                result = retrace(body['spec'], body['waypoints'],
-                                 steps=body.get('steps', 70),
-                                 rounding=body.get('rounding', 0.0),
-                                 label=body.get('label', 'edited path'),
-                                 level=body.get('level', 'rho'),
-                                 numeric=bool(body.get('numeric', False)),
-                                 verify=bool(body.get('verify', False)),
-                                 closed=bool(body.get('closed', False)))
-            else:
-                from .compute import compute
-                # Only the untouched preset gets the file's own paths; once a
-                # field is edited the spec no longer matches what those paths
-                # were written for.
-                paths = PRESET_PATHS if body.pop('preset', False) else None
-                result = compute(body, paths)
+            from .compute import answer
+            result = answer(self.path, body, PRESET_PATHS)
         except Exception as exc:                      # never kill the server
             result = {'ok': False, 'error': f'{type(exc).__name__}: {exc}'}
         self._send(200, json.dumps(result), 'application/json')

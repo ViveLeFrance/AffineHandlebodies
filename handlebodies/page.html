@@ -250,9 +250,19 @@ function spec(withRho){
 let usePreset = false;   // true only for the automatic first run
 function touched(){ usePreset = false; }
 
+// The page runs either against the local server or, in the built version, a
+// Python runtime inside the browser -- which answers with the object itself
+// rather than a response.  Everything below goes through here, so the rest of
+// the page never has to know which of the two is behind it.
+async function api(path, opts){
+  if (window.HANDLEBODIES_BACKEND)
+    return {json: () => window.HANDLEBODIES_BACKEND(path, opts.body)};
+  return fetch(path, opts);
+}
+
 async function post(body){
   if (usePreset) body.preset = true;
-  const r = await fetch('/api/compute', {method:'POST',
+  const r = await api('/api/compute', {method:'POST',
     headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
   return r.json();
 }
@@ -711,7 +721,7 @@ function redrawPath(ed, preview){
 async function refreshPreview(ed){
   const token = ++ed.token;
   try {
-    const r = await fetch('/api/path', {method: 'POST',
+    const r = await api('/api/path', {method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({waypoints: pathWaypoints(ed),
                             steps: Number(ed.steps.value) || 70,
@@ -780,7 +790,7 @@ async function recompute(key){
   const ed = EDITORS[key];
   ed.button.disabled = true; ed.button.textContent = 'computing\u2026';
   try {
-    const r = await fetch('/api/trace', {method: 'POST',
+    const r = await api('/api/trace', {method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({spec: spec(true), waypoints: pathWaypoints(ed),
                             steps: Number(ed.steps.value) || 70,

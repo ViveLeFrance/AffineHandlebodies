@@ -347,3 +347,32 @@ def sample_path(waypoints, steps=70, rounding=0.0, closed=False):
     path = rounded_path([complex(a, b) for a, b in waypoints],
                         steps=int(steps), rounding=rounding, closed=closed)
     return {'ok': True, 'path': [[float(p.real), float(p.imag)] for p in path]}
+
+
+def answer(path, body, paths=((), ())):
+    """Route one of the page's API calls to the function behind it.
+
+    The local server and the built page both come through here, so the same
+    request gets the same answer whether the Python is running on the machine
+    or inside the browser.  `body` is the decoded request; what comes back is
+    what gets sent as JSON.
+    """
+    if path == '/api/path':
+        return sample_path(body['waypoints'], steps=body.get('steps', 70),
+                           rounding=body.get('rounding', 0.0),
+                           closed=bool(body.get('closed', False)))
+    if path == '/api/trace':
+        return retrace(body['spec'], body['waypoints'],
+                       steps=body.get('steps', 70),
+                       rounding=body.get('rounding', 0.0),
+                       label=body.get('label', 'edited path'),
+                       level=body.get('level', 'rho'),
+                       numeric=bool(body.get('numeric', False)),
+                       verify=bool(body.get('verify', False)),
+                       closed=bool(body.get('closed', False)))
+    if path == '/api/compute':
+        # Only the untouched preset gets the file's own paths; once a field is
+        # edited the spec no longer matches what those paths were written for.
+        declared = paths if body.pop('preset', False) else None
+        return compute(body, declared)
+    raise LookupError(f'no endpoint {path}')
