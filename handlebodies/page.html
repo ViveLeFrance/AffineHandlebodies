@@ -538,24 +538,23 @@ function treeSvg(edges, n){
 
 function plumbingTrees(pl){
   if (!pl) return '';
-  const n = pl.vertices;
-  if (!pl.listed)
-    return '<details class="trees">'
-      + '<summary>plumbing trees (too many to list)</summary>'
-      + `<p class="hint">This fibre is a plumbing of ${n} cylinders, but the
-         trees on ${n} vertices are more than are worth enumerating here. The
-         limit is the listing's, not the fibre's.</p></details>`;
-  if (!pl.trees.length)
+  const n = pl.vertices, k = pl.trees.length;
+  if (!k)
     return '<details class="trees"><summary>plumbing trees</summary>'
       + '<p class="hint">No tree of cylinders gives this fibre. Genus zero'
       + ' needs a graph with a cycle, and the disc is not a plumbing at all.'
       + '</p></details>';
-  const k = pl.trees.length;
+  const head = pl.listed ? (k === 1 ? 'one plumbing tree' : k + ' plumbing trees')
+                         : k + ' plumbing trees, and more';
+  const note = pl.listed
+    ? `Plumbing ${n} cylinders along any of these gives this fibre. A skeleton
+       is a choice, not an invariant, so where there is more than one they all
+       present the same surface.`
+    : `Plumbing ${n} cylinders along any of these gives this fibre. There are
+       more trees on ${n} vertices than are worth enumerating, so these are
+       examples rather than the whole list.`;
   return '<details class="trees">'
-    + `<summary>${k === 1 ? 'one plumbing tree' : k + ' plumbing trees'}</summary>`
-    + `<p class="hint">Plumbing ${n} cylinders along any of these gives this
-       fibre. A skeleton is a choice, not an invariant, so where there is more
-       than one they all present the same surface.</p>`
+    + `<summary>${head}</summary><p class="hint">${note}</p>`
     + '<div class="treegrid">'
     + pl.trees.map(e => treeSvg(e, n)).join('') + '</div></details>';
 }

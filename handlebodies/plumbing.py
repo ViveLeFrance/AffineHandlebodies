@@ -151,16 +151,61 @@ def free_trees(n):
     return list(seen.values())
 
 
-def realising(genus, ends):
-    """Every tree whose plumbing gives a surface of this genus and this many ends.
+def _compositions(total, parts):
+    """Ways of splitting `total` into `parts` positive pieces."""
+    for cuts in itertools.combinations(range(1, total), parts - 1):
+        edges = (0,) + cuts + (total,)
+        yield tuple(edges[i + 1] - edges[i] for i in range(parts))
 
-    Returns the vertex count, the trees as edge lists, and whether the search
-    was made at all -- past `VERTEX_LIMIT` the answer is a list nobody wants.
+
+def some_realising(genus, ends, wanted):
+    """A few trees realising the surface, built rather than searched for.
+
+    Enumerating every tree on many vertices is the expensive part, so these are
+    constructed instead: take any tree of `genus` centres and hang the
+    remaining vertices off them as leaves, every centre carrying at least one.
+    The centres are then a vertex cover, so the matching is at most their
+    number, and a leaf apiece gives that many disjoint edges, so it is exactly
+    their number.
+
+    Not every tree has this shape -- A5 does not, its cover being two vertices
+    that are not adjacent and its middle vertex being no leaf -- so this is a
+    supply of examples, not a census.
+    """
+    if genus < 1:
+        return []
+    leaves = genus + ends - 1
+    if leaves < genus:
+        return []
+    found = {}
+    for centres in free_trees(genus):
+        for share in _compositions(leaves, genus):
+            edges, nxt = list(centres), genus
+            for centre, count in enumerate(share):
+                for _ in range(count):
+                    edges.append((centre, nxt))
+                    nxt += 1
+            found.setdefault(_canonical(edges, nxt), edges)
+            if len(found) >= wanted:
+                return list(found.values())
+    return list(found.values())
+
+
+def realising(genus, ends, sample=20):
+    """The trees whose plumbing gives a surface of this genus and this many ends.
+
+    Complete while the vertices are few enough to enumerate them all, and past
+    that a handful built by hand: knowing one tree that works is worth more
+    than knowing that there are too many to count.
+
+    Genus one is complete either way.  A tree with no two disjoint edges is a
+    star, so there is only ever the one.
     """
     n = 2 * genus + ends - 1
     if n < 1:
         return {'vertices': n, 'trees': [], 'listed': True}
-    if n > VERTEX_LIMIT:
-        return {'vertices': n, 'trees': [], 'listed': False}
-    trees = [e for e in free_trees(n) if matching_number(e, n) == genus]
-    return {'vertices': n, 'trees': trees, 'listed': True}
+    if n <= VERTEX_LIMIT:
+        trees = [e for e in free_trees(n) if matching_number(e, n) == genus]
+        return {'vertices': n, 'trees': trees, 'listed': True}
+    trees = some_realising(genus, ends, sample)
+    return {'vertices': n, 'trees': trees, 'listed': genus == 1}
