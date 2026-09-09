@@ -641,7 +641,12 @@ function renderRho(r){
   h = document.createElement('h2'); h.textContent = 'Vanishing cycles of \u03c1';
   host.appendChild(h);
   for (const v of q.vanishing){
-    if (v.target === null || v.target === undefined)   // path fixed in the example file
+    if (v.failed){
+      const div = document.createElement('div');
+      div.className = 'err';
+      div.textContent = `${v.name}: ${v.result}`;
+      host.appendChild(div);
+    } else if (v.target === null || v.target === undefined)   // path fixed in the example file
       showResult(host, v.figure, v.name + ' \u2014 ' + v.result, v.monodromy);
     else addPicker(host, v, q.values, q.origin_xy, 'rho');
   }

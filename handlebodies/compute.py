@@ -140,15 +140,31 @@ def rho_section(study):
         return f"points {i} and {j} collide (gap {gap:.1e})"
 
     n_rho = len(cv)
-    out['vanishing'] = [{
-        'name': m['name'], 'key': _slug(m['name']),
-        'target': i if i < n_rho else None,
-        'result': described(m), 'closed': m['closed'],
-        'monodromy': m['monodromy'],
-        'figure': _fig(R.trace(
-            m['branches'], title=f"rho: {m['name']} -- {described(m)}",
-            highlight=None if m['closed'] else m['collision'][:2])),
-    } for i, m in enumerate(study.vanishing_cycles())]
+
+    def traced(i, m):
+        """One vanishing path, as the page needs it.
+
+        A path whose values could not be computed at all has nothing to draw,
+        and saying so is the whole of the answer -- the same treatment the
+        matching paths already get in `_traced`.  Reaching for a collision
+        that is not there is how an untraceable path used to come back as a
+        TypeError from this stage instead of as its own error.
+        """
+        row = {'name': m['name'], 'key': _slug(m['name']),
+               'target': i if i < n_rho else None,
+               'result': described(m), 'closed': m['closed'],
+               'monodromy': m['monodromy'],
+               'failed': bool(m.get('error')), 'figure': None}
+        if m.get('error'):
+            row['result'] = m['error']
+            return row
+        row['figure'] = _fig(R.trace(
+            m['branches'], title=f"rho: {m['name']} -- {row['result']}",
+            highlight=None if m['collision'] is None else m['collision'][:2]))
+        return row
+
+    out['vanishing'] = [traced(i, m)
+                        for i, m in enumerate(study.vanishing_cycles())]
 
     return out
 

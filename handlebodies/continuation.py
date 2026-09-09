@@ -33,6 +33,12 @@ SETTLED = 1e-8
 #: guards against a step so large that two of them swap places
 SHRINK = 0.05
 
+#: how far off the minor a root of the fibre may sit and still count as a
+#: critical point over the same first coordinate.  Generous: a root arrives
+#: with the accuracy np.roots gives it, and a root that is not a critical
+#: point misses by order 1, so there is a wide gap to sit in.
+ON_MINOR = 1e-6
+
 
 class TrackingFailure(RuntimeError):
     """Raised when the solutions cannot be followed reliably."""
@@ -131,10 +137,23 @@ def separation(points):
 def seed(fibre, variables, coeffs, report=None):
     """The critical points on one fibre, found exactly.
 
-    Eliminating one coordinate gives the other exactly; the companion is picked
-    from the roots of the fibre by which of them also satisfies the minor, then
-    polished.  The polish matters: the companion arrives with only the accuracy
-    that root-finding on a substituted polynomial gives it.
+    Eliminating one coordinate gives the values the other takes, exactly; the
+    companions are read off the roots of the fibre by which of them also
+    satisfy the minor, then polished.  The polish matters: a companion arrives
+    with only the accuracy that root-finding on a substituted polynomial gives
+    it.
+
+    Every compatible companion is kept, not just the likeliest one.  The
+    eliminant records the distinct values the first coordinate takes, not the
+    points themselves: a projection can send two critical points to the same
+    value, and one companion per root then seeds fewer points than there are.
+    Nothing downstream would notice.  The tracking follows whatever it is
+    given, and with a point missing it follows the rest perfectly -- residual
+    at roundoff, no subdivision, nothing reported; down to a single point it
+    cannot even measure a separation, so its own guards go quiet too.  So the
+    count is checked here, against the length of the critical scheme, rather
+    than left to `verify`, which compares counts only at the far end of the
+    path, is off by default, and is skipped outright if the path stopped short.
 
     `report`, if given, collects how many points could not be refined.
     """
@@ -148,6 +167,7 @@ def seed(fibre, variables, coeffs, report=None):
     coefficients = [sp.lambdify(u, c, 'numpy')
                     for c in sp.Poly(equations[0], v).all_coeffs()]
     minor_at = sp.lambdify((u, v), equations[1], 'numpy')
+    minor_scale = _term_scale(equations[1], (u, v))
     both_at = sp.lambdify((u, v), equations, 'numpy')
     dboth_at = sp.lambdify((u, v), [sp.diff(e, v) for e in equations], 'numpy')
 
@@ -156,19 +176,108 @@ def seed(fibre, variables, coeffs, report=None):
         candidates = np.roots([complex(f(uv)) for f in coefficients])
         if not len(candidates):
             raise TrackingFailure('the fibre degenerates at the start of the path')
-        # Try the companions in order of how well each satisfies the minor, and
-        # keep the first that refines.  Picking only the best-looking one and
-        # giving up if it fails throws away a solution the eliminant has
-        # already found exactly, on the strength of one guess at its partner.
-        resid = [abs(complex(minor_at(uv, c))) for c in candidates]
-        companion, converged = _refine_companion(
-            both_at, dboth_at, uv, candidates[int(np.argmin(resid))])
-        if not converged:
-            unrefined += 1
-        points.append(np.array([uv, companion], complex))
+        def off(c, uv=uv):
+            return _minor_residual(minor_at, minor_scale, uv, c)
+        chosen = [c for c in candidates if off(c) <= ON_MINOR]
+        if not chosen:
+            # The eliminant put a solution over this value, so there is a
+            # companion to find; take the likeliest rather than none at all.
+            chosen = [min(candidates, key=off)]
+        for guess in chosen:
+            companion, converged = _refine_companion(
+                both_at, dboth_at, uv, guess)
+            if not converged:
+                unrefined += 1
+            point = np.array([uv, companion], complex)
+            # Two candidates straddling one companion refine onto it, which is
+            # right where the fibre runs tangent to the direction being solved
+            # in and the pair is genuinely one point.  Merging is safe because
+            # merging too far is caught: the count below would come up short.
+            if not any(_same_point(point, q) for q in points):
+                points.append(point)
     if report is not None:
         report['unrefined_seeds'] = unrefined
+
+    length = A.quotient_dimension(equations, [u, v])
+    if length is not None and len(points) != length:
+        raise TrackingFailure(
+            f'seeded {len(points)} critical point'
+            f'{"" if len(points) == 1 else "s"} on the starting fibre, but its '
+            f'critical scheme has length {length}: '
+            + _why_short(equations, [u, v]))
     return np.array(points, complex)
+
+
+def _why_short(equations, variables):
+    """Why the seed does not have as many points as the scheme has length.
+
+    Three things can put it there, and they want opposite responses, so it is
+    worth the extra elimination to say which.  Both questions are asked of the
+    ideal rather than of the numbers, and only ever on the way to raising, so
+    nothing on the working path pays for them.
+    """
+    fibre, minor = equations
+    jacobian = sp.Matrix([[sp.diff(e, w) for w in variables]
+                          for e in equations]).det()
+    degenerate = A.quotient_dimension(equations + [sp.expand(jacobian)],
+                                      variables)
+    if degenerate == 0:
+        return ('the scheme is reduced, so every point is there to be found '
+                'and the seeding missed one -- which is a bug, not a choice '
+                'of fibration')
+
+    singular = A.quotient_dimension(
+        [fibre] + [sp.diff(fibre, w) for w in variables], variables)
+    if singular is None or singular > 0:
+        return ('the starting fibre is itself singular, and its singular '
+                'point is a critical point of every linear rho, so no choice '
+                'of rho will help; move the reference value of pi off pi\'s '
+                'critical values')
+    return ('rho has a degenerate critical point on a smooth fibre, so it is '
+            'not Morse there; perturb rho -- almost any other linear form '
+            'will do')
+
+
+def _term_scale(expr, variables):
+    """Compile |expr| with every term made positive: what it sums, in size.
+
+    The yardstick a residual has to be read against.  It has to be built from
+    the whole expression, in all its variables, and evaluated at the point:
+    scaling against the coefficients left after substituting one coordinate
+    measures the wrong thing entirely.  Where the substitution is the very
+    thing that cancels -- a minor of 3u^2 - 6 at u = sqrt(2), whose terms are
+    each worth 6 -- what survives it is the roundoff, about 1.8e-15, and
+    dividing that by itself calls a solution a miss by a factor of one.
+    """
+    p = sp.Poly(expr, *variables)
+    absolute = sum(abs(c) * sp.prod([w ** e for w, e in zip(variables, mono)])
+                   for mono, c in zip(p.monoms(), p.coeffs()))
+    return sp.lambdify(variables, absolute, 'numpy')
+
+
+def _minor_residual(minor_at, minor_scale, u_value, v_value):
+    """How far off the minor a point sits, relative to the terms summed.
+
+    Never absolute: these expressions carry high powers of coordinates of
+    appreciable size, so the residual at a perfectly good root runs to
+    whatever those powers happen to be worth and says nothing on its own.
+
+    Zero when there is nothing to be off by, the terms themselves having
+    vanished.  That is not a degenerate case to guard against but one of the
+    two this is here for -- a minor that vanishes identically over this value
+    of the first coordinate is what a projection failing to separate the
+    critical points looks like, and every root of the fibre then qualifies.
+    """
+    scale = float(abs(complex(minor_scale(abs(u_value), abs(v_value)))))
+    if scale == 0:
+        return 0.0
+    return abs(complex(minor_at(u_value, v_value))) / scale
+
+
+def _same_point(a, b, tol=1e-7):
+    """Whether two seeds are the same point, relative to their size."""
+    scale = max(1.0, float(np.abs(b).max()))
+    return bool(np.abs(a - b).max() <= tol * scale)
 
 
 def _refine_companion(both_at, dboth_at, u_value, guess, tol=1e-12,

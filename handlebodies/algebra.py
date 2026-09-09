@@ -142,6 +142,18 @@ def linear_eliminant(curve, minor, variables, coeffs, extra=W):
         substituted.append(sp.Poly(sp.numer(e), v))
     if any(e.is_zero for e in substituted):
         return None
+    # A resultant reports the common roots faithfully only where at least one
+    # of the pair keeps its degree in v.  Where both leading coefficients
+    # vanish together it vanishes too, whether or not anything is there, and
+    # that value of `extra` comes back as a critical value of a fibration that
+    # has none: on x*y = 1 with rho = x the substituted pair is (W*y - 1, -W)
+    # and the resultant is -W, whose root is precisely where the curve loses
+    # its y.  There is no factor to divide out that is safe in general -- such
+    # a value can be a genuine critical value as well -- so the honest move is
+    # to hand these back to the general route rather than invent one.
+    common = sp.gcd(*[e.LC() for e in substituted])
+    if sp.Poly(common, extra).degree() > 0:
+        return None
     res = sp.expand(sp.resultant(*substituted))
     if res == 0:
         # the two curves share a component, so the critical locus is a curve
