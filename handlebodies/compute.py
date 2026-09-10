@@ -438,6 +438,8 @@ def answer(path, body, paths=((), ())):
                        numeric=bool(body.get('numeric', False)),
                        verify=bool(body.get('verify', False)),
                        closed=bool(body.get('closed', False)))
+    if path == '/api/exceptional':
+        return study_for(body).bifibration.exceptional_values()
     if path == '/api/surface':
         return surface(body)
     if path == '/api/compute':

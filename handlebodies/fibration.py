@@ -259,6 +259,17 @@ class Bifibration:
         return LinearFibration(self.pi.fibre(t), self.rho_vars, expression,
                                origin=self.rho_origin, solvefor=self.rho_solvefor)
 
+    def exceptional_values(self, timeout=10):
+        """Non-Morse rho parameters on smooth affine pi fibres.
+
+        Returns a report with ``status`` and ``values`` ([real, imag] pairs).
+        Only ``status == 'complete'`` certifies the finite list, possibly empty.
+        Computations are cached by geometry and bounded by ``timeout`` seconds.
+        Does not test infinity or distinct critical points sharing a value.
+        """
+        from .exceptional import values
+        return values(self, timeout=timeout)
+
     @property
     def rho_0(self):
         return self.rho_at(self.pi.origin)
