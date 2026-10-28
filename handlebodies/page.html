@@ -184,15 +184,14 @@ details.sec fieldset{border:0;background:var(--panel);padding:.9rem 1rem}
     <input type="checkbox" id="numeric"> track the paths numerically
   </label><span class="note">Follows the solutions along the path instead of
     re-solving at every step. Much quicker at high degree, where the exact
-    route is not practical; leave it off for small surfaces, where the exact
-    route is instant and exact.</span>
+    route is not practical.</span>
   <span class="opt off" id="verifyopt">
     <label class="sub"><input type="checkbox" id="verify" disabled> check each
       path against an exact solve at its end</label>
     <span class="note">Only means anything when the paths are tracked: it is
       the tracking it checks. The strongest check there is, but that one solve
       can cost many times the tracking -- about twenty times, on a degree-14
-      surface -- so it is off unless you ask for it.</span>
+      surface.</span>
   </span></p>
   <button type="submit" id="bmatch">Compute matching paths</button>
 </fieldset>

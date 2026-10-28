@@ -19,7 +19,7 @@ def pl_path(points, steps=70):
 def circle(radius, centre=0, steps=200, anticlockwise=True):
     """Circle of the given radius about `centre`."""
     s = np.linspace(0, 2 * np.pi, steps)
-    if not anticlockwise:
+    if anticlockwise:
         s = -s
     return centre + radius * (np.sin(s) + 1j * np.cos(s))
 
